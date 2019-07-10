@@ -1,0 +1,29 @@
+https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=nucleotide&term=NZ_LR130239.1&usehistory=y
+
+
+
+<eSearchResult>
+<Count>1</Count>
+<RetMax>1</RetMax>
+<RetStart>0</RetStart>
+<QueryKey>1</QueryKey>
+<WebEnv>
+NCID_1_212113817_130.14.22.76_9001_1556110471_1121175649_0MetA0_S_MegaStore
+</WebEnv>
+<IdList>
+<Id>1574394220</Id>
+</IdList>
+<TranslationSet/>
+<QueryTranslation/>
+</eSearchResult>
+
+
+https://www.ncbi.nlm.nih.gov/protein?LinkName=nuccore_protein&from_uid=1574394220
+
+
+
+https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=protein&query_key=1&WebEnv=$web
+
+
+$url = $base . "efetch.fcgi?db=$db&query_key=$key&WebEnv=$web";
+$url .= "&rettype=abstract&retmode=text";

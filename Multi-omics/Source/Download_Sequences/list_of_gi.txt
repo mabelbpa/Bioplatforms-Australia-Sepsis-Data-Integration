@@ -1,0 +1,51 @@
+nohup: ignoring input
+Use of uninitialized value $uid in concatenation (.) or string at fetch_fasta.pl line 25.
+Use of uninitialized value $id_list in concatenation (.) or string at fetch_fasta.pl line 36.
+Use of uninitialized value $key in concatenation (.) or string at fetch_fasta.pl line 48.
+Use of uninitialized value $web in concatenation (.) or string at fetch_fasta.pl line 48.
+Use of uninitialized value $fasta_data in string at fetch_fasta.pl line 56.
+NZ_LR130239.1
+NZ_LR130240.1
+NZ_LR129840.1
+NZ_LR129841.1
+NZ_LR129843.1
+NZ_LR129844.1
+NZ_LR130509.1
+NZ_LR130510.1
+NZ_LR130511.1
+NZ_LR130512.1
+NZ_LR130513.1
+NZ_LR130514.1
+NZ_LR130515.1
+NZ_LR130516.1
+NZ_LR130517.1
+NZ_LR130518.1
+NZ_LR130519.1
+NZ_LR130520.1
+NZ_LR130545.1
+NZ_LR130546.1
+NZ_LR130547.1
+NZ_LR130562.1
+NZ_LR130563.1
+NZ_LR130555.1
+NZ_LR130556.1
+NZ_LR130557.1
+NZ_LR130558.1
+NZ_LR1305559.1
+$term = NZ_LR1305559.1, $uid = 
+NZ_LR130560.1
+NZ_LR130561.1
+NZ_LR130552.1
+NZ_LR130553.1
+NZ_LR130554.1
+NZ_LR130539.1
+NZ_LR130540.1
+NZ_LR130541.1
+NZ_LR130542.1
+NZ_LR130538.1
+NZ_LR130548.1
+NZ_LR130549.1
+NZ_LR130550.1
+NZ_LR130551.1
+NZ_LR130544.1
+NZ_LR130543.1

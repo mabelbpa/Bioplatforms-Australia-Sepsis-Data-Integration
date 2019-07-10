@@ -1,0 +1,432 @@
+---
+title: "R Notebook"
+output: html_notebook
+author: Ignaitus Pang ` i.pang at unsw.edu.au '
+
+---
+
+
+```{r}
+if( !require(pacman)) {
+  install.packages("pacman")
+  library(pacman)
+}
+
+p_load(tidyverse)
+p_load(readxl)
+p_load(stringr)
+
+curr_theme <- theme_get()
+
+
+p_load(cowplot) # cowplot overwrites the default theme, so need to by-pass this 
+
+
+theme_set(curr_theme)
+
+base_dir <- here::here() # "/home/ignatius/PostDoc/2019/Sepsis"
+source( file.path( base_dir, "Source/Common/helper_functions.R") )
+source( file.path( base_dir, "Source/Common/common_parameters.R") )
+
+```
+
+## Global parameters
+```{r}
+best_e_value_to_use <- 10^-3
+
+```
+
+
+## Directories Management
+```{r}
+
+kegg_annotations_dir <- file.path( owncloud_dir, "Multi-omics/Results/KEGG_Annotations")
+
+blast_to_uniprot_merged_file <- file.path( oc_results_dir,
+                                           "Blast_Strain_To_Uniprot_DB/Merged_TSV/blast_to_uniprot_merged.tsv")
+
+create_dir_if_not_exists( file.path( oc_results_dir, "KEGG_Annotations/Figures"))
+
+```
+
+## Get List of Files, query proteins mapped to pathways
+```{r}
+list_of_files <- Sys.glob( file.path( kegg_annotations_dir, "*", "Map_to_Uniprot", "mapping_uniprot_hits_to_pathways_summary_statistics.tsv"))
+
+
+list_of_evalue_thresholds <- purrr::map_chr( list_of_files, ~str_split( str_split(., "/")[[1]][9], "_")[[1]][3]  ) %>% as.numeric()
+
+names( list_of_files) <- list_of_evalue_thresholds
+
+```
+
+## Get List of Files, query proteins mapped to Uniprot proteins
+```{r}
+list_of_files_uniprot <- Sys.glob( file.path( kegg_annotations_dir, "*", "Map_to_Uniprot", "mapping_uniprot_hits_summary_statistics.tsv"))
+
+list_of_evalue_thresholds_uniprot <- purrr::map_chr( list_of_files_uniprot, ~str_split( str_split(., "/")[[1]][9], "_")[[1]][3]  ) %>% as.numeric()
+
+names( list_of_files_uniprot) <- list_of_evalue_thresholds_uniprot
+
+```
+
+
+## Get information and data about the genomes
+```{r}
+genome_statistics_file <- file.path( data_dir, "Genomes_List/num_seq_per_strain_and_accession.xlsx") 
+
+## Get the number of sequences per chromosome or plasmid
+num_seq_per_accession  <- read_xlsx(path=genome_statistics_file, sheet="num_seq_per_accession")
+
+
+## Get the name of chromosomes and plasmids
+chromosomes_and_plasmids_names <- read_tsv( file.path( data_dir, "Genomes_List/chromosomes_and_plasmids_names.tsv" )) 
+
+```
+
+## Number of sequences per chromosome
+```{r}
+num_sequences_per_chromosome <- chromosomes_and_plasmids_names %>%
+  filter( Species != "Streptococcus pneumoniae" ) %>%
+  left_join( num_seq_per_accession, by =c( "chromosome_refseq_id")) %>%
+  filter( sequence_type == "Chromosomes") %>%
+  ggplot( aes( sequence_name, num_sequences)) +
+  geom_col() +
+  facet_wrap( . ~ Species, scales="free" ) +
+  xlab( "Strains") +
+  ylab( "No. sequences") + 
+  theme(strip.text = element_text(face = "italic")) + 
+  theme(axis.text.x = element_text(angle=90, hjust=1)) 
+
+num_sequences_per_chromosome
+
+ggsave( plot=num_sequences_per_chromosome, 
+        filename=file.path( oc_results_dir, "KEGG_Annotations/Figures", "num_sequences_per_chromosome.png"),
+        width = 12,
+        height = 7) 
+
+```
+
+
+
+## Number of sequences per plasmid
+```{r}
+num_sequences_per_plasmid <- chromosomes_and_plasmids_names %>%
+  filter( Species != "Streptococcus pneumoniae" ) %>%
+  left_join( num_seq_per_accession, by =c( "chromosome_refseq_id")) %>%
+  filter( sequence_type == "Plasmids") 
+
+num_sequences_per_plasmid_ggplot <- num_sequences_per_plasmid %>%
+  ggplot( aes( sequence_name, num_sequences)) +
+  geom_col() +
+  facet_wrap( . ~ Species, scales="free" ) +
+  xlab( "Strains") +
+  ylab( "No. sequences") + 
+  theme(axis.text.x = element_text(angle=90, hjust=1)) + 
+  theme(strip.text = element_text(face = "italic"))
+
+num_sequences_per_plasmid_ggplot
+
+ggsave( plot=num_sequences_per_plasmid_ggplot, 
+        filename=file.path( oc_results_dir, "KEGG_Annotations/Figures", "num_sequences_per_plasmid.png"),
+        width = 12,
+        height = 7) 
+
+
+```
+
+
+
+## Query proteins mapped to uniprots stats 
+```{r}
+
+hits_to_uniprot_stats <-  purrr::map( list_of_files_uniprot, read_tsv )  %>%
+                          bind_rows( .id="e_values") %>%
+  filter( Query_Species != "Streptococcus pneumoniae" ) %>%
+  mutate( Query_Species = case_when( Query_Strain %in% c( "AJ055", "AJ292", "03-311-0071", "04153260899A") ~ "Klebsiella variicola",
+                                     TRUE ~ Query_Species )) %>%
+  mutate( type = ifelse( total_num_proteins_in_proteome > 1000, 
+                         "Chromosomes", 
+                         "Plasmids")) %>%
+  mutate( e_values = as.numeric(e_values))
+
+hits_to_uniprot_stats
+```
+
+## Percentage of proteins in chromosome mapped to Uniprot proteins versus different E-values threshold
+```{r}
+perc_mapped_to_uniprot_vs_e_values <- hits_to_uniprot_stats %>%
+  filter( type == "Chromosomes") %>%
+  ggplot( aes( log10(e_values), num_proteins_in_pathways/total_num_proteins_in_proteome*100 )) +
+  geom_line( aes( group=Query_Strain, col=Query_Strain )) +
+  facet_wrap (  Query_Species ~ ., scales="free_y") +
+  ylab("% of proteins with Uniprot mapping") +
+  xlab(expression(log[10]('E-value')))  + 
+  theme(strip.text = element_text(face = "italic")) + 
+  guides(col=guide_legend(title="Strains"))
+
+perc_mapped_to_uniprot_vs_e_values
+
+ggsave( plot=perc_mapped_to_uniprot_vs_e_values, 
+        filename=file.path( oc_results_dir, "KEGG_Annotations/Figures", "perc_mapped_to_uniprot_vs_e_values.png"),
+        width = 12,
+        height = 7) 
+
+```
+
+
+## Percentage of proteins in plasmids mapped to Uniprot proteins versus different E-values threshold
+```{r}
+perc_mapped_to_uniprot_vs_e_values_plasmids <- hits_to_uniprot_stats %>%
+  left_join( chromosomes_and_plasmids_names, by =c( "chromosome_refseq_id")) %>%
+  filter( Species != "Streptococcus pneumoniae" ) %>%
+  filter( type == "Plasmids") %>%
+  ggplot( aes( log10(e_values), num_proteins_in_pathways/total_num_proteins_in_proteome*100 )) +
+  geom_line( aes( group=sequence_name, col=sequence_name )) +
+  facet_wrap (  Query_Species ~ ., scales="free_y") +
+  ylab("% of proteins with Uniprot mapping") +
+  xlab(expression(log[10]('E-value'))) + 
+  theme(strip.text = element_text(face = "italic")) + 
+  guides(col=guide_legend(title="Plasmids"))
+
+perc_mapped_to_uniprot_vs_e_values_plasmids
+
+ggsave( plot=perc_mapped_to_uniprot_vs_e_values_plasmids, 
+        filename=file.path( oc_results_dir, "KEGG_Annotations/Figures", "perc_mapped_to_uniprot_vs_e_values_plasmids.png"),
+        width = 12,
+        height = 7) 
+
+```
+
+## Hits to pathways stats 
+```{r}
+hits_to_pathways_stats <-  purrr::map( list_of_files, read_tsv )  %>%
+                          bind_rows( .id="e_values") %>%
+  filter( Query_Species != "Streptococcus pneumoniae" ) %>%
+  mutate( Query_Species = case_when( Query_Strain %in% c( "AJ055", "AJ292", "03-311-0071", "04153260899A") ~ "Klebsiella variicola",
+                                     TRUE ~ Query_Species )) %>%
+  mutate( type = ifelse( total_num_proteins_in_proteome > 1000, 
+                         "Chromosomes", 
+                         "Plasmids")) %>%
+  mutate( e_values = as.numeric(e_values))
+
+hits_to_pathways_stats
+```
+
+
+## Number of proteins in chromosome mapped to pathways versus different E-values threshold
+```{r, eval=FALSE}
+ # hits_to_pathways_stats %>%
+ #  filter( type == "Chromosomes") %>%
+ #  ggplot( aes( log10(e_values), num_proteins_in_pathways )) +
+ #  geom_line( aes( group=Query_Strain, col=Query_Strain )) +
+ #  facet_grid (  Query_Species ~ ., scales="free_y") +
+ #  ylab("No. of proteins in pathways") +
+ #  xlab(expression(log[10]('E-value')))
+ 
+```
+
+## Percentage of proteins in chromosome mapped to pathways versus different E-values threshold
+```{r}
+perc_mapped_to_pathways_vs_e_values <- hits_to_pathways_stats %>%
+  filter( type == "Chromosomes") %>%
+  ggplot( aes( log10(e_values), num_proteins_in_pathways/total_num_proteins_in_proteome*100 )) +
+  geom_line( aes( group=Query_Strain, col=Query_Strain )) +
+  facet_wrap (  Query_Species ~ ., scales="free_y") +
+  ylab("% of proteins in pathways") +
+  xlab(expression(log[10]('E-value'))) + 
+  theme(strip.text = element_text(face = "italic")) + 
+  guides(col=guide_legend(title="Strains"))
+
+perc_mapped_to_pathways_vs_e_values
+
+ggsave( plot=perc_mapped_to_pathways_vs_e_values, 
+        filename=file.path( oc_results_dir, "KEGG_Annotations/Figures", "perc_mapped_to_pathways_vs_e_values.png"),
+        width = 12,
+        height = 7) 
+
+```
+
+
+
+## Percentage of proteins in plasmids mapped to pathways versus different E-values threshold
+```{r}
+
+list_of_e_values_to_test <-  c(  10^-6, 10^-5, 10^-4, 10^-3, 10^-2, 10^-1, 1 ) 
+
+perc_mapped_to_pathways_vs_e_values_plasmids <- num_sequences_per_plasmid %>%
+  mutate(temp_id = 1) %>%
+  full_join( data.frame(e_values=list_of_e_values_to_test, temp_id = 1 ) , by=c( "temp_id" = "temp_id" )) %>%
+  dplyr::select(-temp_id) %>%
+  left_join ( hits_to_pathways_stats , by =c( "chromosome_refseq_id" = "chromosome_refseq_id",
+                                              "Species" = "Query_Species" ,
+                                              "Strain" = "Query_Strain",
+                                              "sequence_type" = "type",
+                                              "e_values" = "e_values") ) %>%
+  dplyr::select(-total_num_proteins_in_proteome) %>%
+  dplyr::rename( total_num_proteins_in_proteome = "num_sequences") %>%
+  filter( Species != "Streptococcus pneumoniae" ) %>%
+  filter( sequence_type == "Plasmids")  %>%
+  replace_na( replace = list ( num_proteins_in_pathways = 0) )
+
+perc_mapped_to_pathways_vs_e_values_plasmids_ggplot <- perc_mapped_to_pathways_vs_e_values_plasmids %>%
+  ggplot( aes( log10(e_values), num_proteins_in_pathways/total_num_proteins_in_proteome*100 )) +
+  geom_line( aes( group=sequence_name, col=sequence_name )) +
+  facet_wrap (  Species ~ ., scales="free_y") +
+  ylab("% of proteins in pathways") +
+  xlab(expression(log[10]('E-value'))) + 
+  theme(strip.text = element_text(face = "italic")) + 
+  guides(col=guide_legend(title="Plasmids"))
+
+perc_mapped_to_pathways_vs_e_values_plasmids_ggplot
+
+ggsave( plot=perc_mapped_to_pathways_vs_e_values_plasmids_ggplot, 
+        filename=file.path( oc_results_dir, "KEGG_Annotations/Figures", "perc_mapped_to_pathways_vs_e_values_plasmids.png"),
+        width = 12,
+        height = 7) 
+
+```
+
+I think use 1e-3 threshold as the growth in number of matches are log-linear up until this point.
+
+
+
+## Arrange plots into multi-panel figures 
+Example from: http://www.sthda.com/english/articles/24-ggpubr-publication-ready-plots/81-ggplot2-easy-way-to-mix-multiple-graphs-on-the-same-page/
+
+### Chromosome based plots 
+```{r}
+
+chromosomes_based_analysis_plots <- ggdraw() +
+  draw_plot(num_sequences_per_chromosome, 
+            x = 0, y = .66, width = 1, height = .33) +
+  draw_plot(perc_mapped_to_uniprot_vs_e_values, 
+            x = 0, y = .33, width = 1, height = .33) +
+  draw_plot(perc_mapped_to_pathways_vs_e_values,
+            x = 0, y = 0, width = 1, height = .33) +
+  draw_plot_label(label = c("A)", "B)", "C)"), size = 16,
+                  x = c(0, 0, 0), y = c(1, 0.66, 0.33))
+
+chromosomes_based_analysis_plots
+
+ggsave( chromosomes_based_analysis_plots, 
+        filename = file.path( oc_results_dir, 
+                              "KEGG_Annotations/Figures", 
+                              "chromosomes_based_analysis_plots.png")
+        , height = 15, width = 10)
+
+```
+
+
+### plasmids based plots 
+```{r}
+
+plasmids_based_analysis_plots <- ggdraw() +
+  draw_plot(perc_mapped_to_pathways_vs_e_values_plasmids_ggplot,
+            x = 0, y = 0, width = 1, height = .33) +
+  draw_plot(perc_mapped_to_uniprot_vs_e_values_plasmids, 
+            x = 0, y = .33, width = 1, height = .33) +
+  draw_plot(num_sequences_per_plasmid_ggplot, 
+            x = 0, y = .66, width = 1, height = .33) +
+  draw_plot_label(label = c("A)", "B)", "C)"), size = 16,
+                  x = c(0, 0, 0), y = c(1, 0.66, 0.33))
+
+plasmids_based_analysis_plots
+
+ggsave( plasmids_based_analysis_plots, 
+        filename = file.path( oc_results_dir, 
+                              "KEGG_Annotations/Figures", 
+                              "plasmids_based_analysis_plots.png")
+        , height = 15, width = 10)
+
+```
+
+
+
+
+
+
+
+
+## Number of proteins mapped to pathways for each of the bacterial strains
+```{r}
+proteins_with_annotaions <- read_tsv(file.path( kegg_annotations_dir, paste("E_value_", best_e_value_to_use, sep="" ), 
+                                      "Map_to_Uniprot", "mapping_uniprot_hits_to_pathways_summary_statistics.tsv"))  %>%
+                          mutate( percentage_mapped = num_proteins_in_pathways/total_num_proteins_in_proteome * 100 ) %>%
+                          mutate( type = ifelse( total_num_proteins_in_proteome > 1000, "Chromosomes", "Plasmids")) %>%
+                          mutate( num_proteins_not_in_pathways = total_num_proteins_in_proteome - num_proteins_in_pathways)
+
+proteins_with_annotaions_cleaned <-  proteins_with_annotaions %>%
+                filter( Query_Species != "Streptococcus pneumoniae") %>%
+                dplyr::select( -total_num_proteins_in_proteome, -percentage_mapped  ) %>%
+                tidyr::pivot_longer( cols = c(num_proteins_in_pathways, num_proteins_not_in_pathways ),  
+                                     names_to="data_type",
+                                     values_to = "values" ) %>%
+                mutate( data_type= factor( data_type, levels=c(  "num_proteins_not_in_pathways", "num_proteins_in_pathways" ),
+                                           labels = c( "Num. proteins not present in pathways",
+                                                       "Num. proteins present in pathways"))) %>%
+                left_join( chromosomes_and_plasmids_names, by = c( "Query_Species" = "Species",
+                                                         "Query_Strain" = "Strain",
+                                                         "chromosome_refseq_id" = "chromosome_refseq_id") )
+
+
+
+## Plot for chromosomes
+chromosomes_plot <- proteins_with_annotaions_cleaned %>% 
+  filter( type == "Chromosomes") %>%
+  ggplot( aes( sequence_name,  values, fill=str_wrap(data_type, width=20))) +
+  geom_col(position = "fill" ) +
+  geom_text(aes(label = values), position = position_fill(vjust = .5)) +
+  facet_wrap( . ~ Query_Species  , scales = "free_x")  + 
+  xlab( "Strains" ) +
+  ylab ( "Proportion") +
+  ggtitle("Chromosomes") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.text = element_text(margin = margin(b = 10, unit = "pt")),
+        strip.text = element_text(face = "italic")) + 
+  guides(fill=guide_legend(title="Legend"))
+
+
+ggsave( plot=chromosomes_plot, 
+        file=file.path( oc_results_dir, 
+                        "KEGG_Annotations/Figures", 
+                        "proteins_in_chromosomes_mapped_to_pathways.png"), 
+        width=10,
+        height=10)
+
+
+
+## Plot for plasmids
+plasmids_plot <- proteins_with_annotaions_cleaned %>% 
+  filter( type == "Plasmids") %>%
+  ggplot( aes( sequence_name,  values, fill= str_wrap(data_type, width=20) )) +
+  geom_col(position = "fill" ) +
+  geom_text(aes(label = values), position = position_fill(vjust = .5)) +
+  facet_wrap( . ~ Query_Species  , scales = "free_x")  + 
+  xlab( "Strains and Plasmid IDs" ) +
+  ylab ( "Proportion") +
+  ggtitle("Plasmids") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        strip.text = element_text(face = "italic"),
+        legend.text = element_text(margin = margin(b = 10, unit = "pt"))) + 
+  guides(fill=guide_legend(title="Legend"))
+
+
+ggsave( plot=plasmids_plot, 
+        file=file.path( oc_results_dir, 
+                         "KEGG_Annotations/Figures",
+                         "proteins_in_plasmids_mapped_to_pathways.png"), 
+        width=6,
+        height=7)
+
+
+```
+
+
+
+
+
+
+
+
+

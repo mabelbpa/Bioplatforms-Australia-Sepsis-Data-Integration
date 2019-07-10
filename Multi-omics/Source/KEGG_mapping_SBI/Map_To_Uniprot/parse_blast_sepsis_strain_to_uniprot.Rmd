@@ -1,0 +1,309 @@
+---
+title: "R Notebook"
+output: html_notebook
+author: Ignaitus Pang ` i.pang at unsw.edu.au '
+---
+
+```{r}
+if( !require(pacman)) {
+  install.packages("pacman")
+  library(pacman)
+}
+
+p_load(tidyverse)
+p_load(here)
+p_load(readxl)
+
+base_dir <- here::here()
+
+source( file.path( base_dir, "Source/Common/common_parameters.R") )
+source( file.path( source_dir, "Common/helper_functions.R") )
+
+```
+
+## Global Parameters
+```{r}
+
+list_of_e_values_to_test <-  c(  10^-6, 10^-5, 10^-4, 10^-3, 10^-2, 10^-1, 1 ) 
+best_e_value_to_use <- 10^-3
+```
+
+nohup Rscript --vanilla -e "rmarkdown::render('parse_blast_sepsis_strain_to_uniprot.Rmd', output_file='parse_blast_sepsis_strain_to_uniprot.html') " > parse_blast_sepsis_strain_to_uniprot.log 2>&1 &
+
+
+## Directories Management
+```{r}
+
+purrr::map( list_of_e_values_to_test, function(my_e_value_cutoff ) {
+  kegg_annotations_dir <- file.path( oc_results_dir, "KEGG_Annotations", paste( "E_value_", my_e_value_cutoff, sep=""), "Map_to_Uniprot" )
+  create_dir_if_not_exists(kegg_annotations_dir)
+} ) 
+
+kegg_dir <- file.path( owncloud_dir, "Annotations_and_Mapping/KEGG_data_files/genes/links")
+
+kegg_genes_to_uniprot_cleaned_file <- file.path( kegg_dir, "genes_uniprot.list")
+kegg_genes_to_pathway_cleaned_file <- file.path( kegg_dir, "genes_pathway.list")
+kegg_genes_to_ko_file <- file.path( kegg_dir, "genes_ko.list")
+
+blast_to_uniprot_file_path <- file.path( oc_results_dir, "Blast_Strain_To_Uniprot_DB/TSV/*")
+
+create_dir_if_not_exists(file.path( oc_results_dir,
+                                           "Blast_Strain_To_Uniprot_DB/Merged_TSV/") )
+
+blast_to_uniprot_merged_file <- file.path( oc_results_dir,
+                                           "Blast_Strain_To_Uniprot_DB/Merged_TSV/blast_to_uniprot_merged.tsv")
+
+
+```
+
+
+## Read Genome statistics
+```{r}
+genome_statistics_file <- file.path( data_dir, "Genomes_List/num_seq_per_strain_and_accession.xlsx") 
+
+num_seq_per_accession  <- read_xlsx(path=genome_statistics_file, sheet="num_seq_per_accession")
+strain_to_accessions   <- read_xlsx(path=genome_statistics_file, sheet="strain_to_accessions")
+chromosome_id_to_protein_id <- read_xlsx(path=genome_statistics_file, sheet="chromosome_id_to_protein_id")
+
+strain_to_accessions_cleaned <- strain_to_accessions %>%
+                                dplyr::select( Species, Strain, refseq_ids) %>%
+                                separate_rows( refseq_ids, sep = "; ") %>%
+                                dplyr::rename( chromosome_refseq_id = "refseq_ids")
+
+num_seq_per_accession_cleaned <- strain_to_accessions_cleaned %>% 
+                                 left_join( num_seq_per_accession, by=c("chromosome_refseq_id" = "chromosome_refseq_id") ) 
+
+```
+
+# https://www.lucidchart.com/pages/ER-diagram-symbols-and-meaning
+## Read KEGG Pathway table cleaned
+```{r}
+kegg_genes_to_uniprot_cleaned <- read_tsv(kegg_genes_to_uniprot_cleaned_file, col_names = FALSE)                                 
+kegg_genes_to_pathway_cleaned  <- read_tsv(kegg_genes_to_pathway_cleaned_file, col_names = FALSE)
+kegg_genes_to_ko <- read_tsv(kegg_genes_to_ko_file, col_names = FALSE)
+
+colnames( kegg_genes_to_uniprot_cleaned  ) <- c("kegg_entrez_id", "uniprot_acc")
+colnames( kegg_genes_to_pathway_cleaned  ) <- c("kegg_entrez_id", "kegg_pathway_id")
+colnames( kegg_genes_to_ko  ) <- c("kegg_entrez_id", "kegg_ko_id")
+
+
+kegg_genes_to_uniprot_cleaned <-   kegg_genes_to_uniprot_cleaned %>% 
+					mutate( uniprot_acc_cleaned = str_replace_all( uniprot_acc, "^.*:", ""))
+
+
+```
+
+
+## Read Blast outputs
+```{r}
+list_of_files <- Sys.glob( blast_to_uniprot_file_path )
+
+column_names <- c("query_acc.ver", "subject_acc.ver", "perc_identity", 
+                  "alignment_length", "mismatches", "gap_opens", 
+                  "q_start", "q_end", "s_start", "s_end", 
+                  "evalue", "bit_score")
+
+```
+
+### Merge the tables together
+```{r, include=TRUE, results="hide"}
+list_of_tables <- purrr::map( list_of_files, function(x) {
+ #  print(x)
+  my_table <- read_tsv(x, comment = "#", col_names = FALSE)  
+  colnames(my_table) <- column_names
+  return(my_table)
+  })   
+
+names(list_of_tables) <- str_replace_all( list_of_files, ".*/(.*).tab", "\\1")  %>%
+                         str_replace_all( "03-311-0071", "03/311/0071"  ) %>%
+                         str_replace_all( "180.2", "180/2") %>%
+                         str_replace_all( "180.15", "180/15")        
+
+```
+
+## Clean up the table and rank the hits by e-values
+```{r}
+
+# head( list_of_tables[[1]])
+
+cleaned_table <- bind_rows( list_of_tables, .id= "Comparison")  %>%
+  filter( str_detect( subject_acc.ver, "^(sp|tr)\\|")) %>%
+  separate(col="Comparison",  sep ="[-\\.]", into=c("Query_a", "Query_b", "Query_Strain")) %>%
+  mutate( Query_Species = paste(Query_a,  Query_b))  %>%
+  dplyr::select ( -Query_a, -Query_b ) %>%
+  mutate( Query_Strain = str_replace( Query_Strain,  "03/311/0071", "03-311-0071") %>%
+                         str_replace_all( "180/2", "180.2") %>%
+                         str_replace_all( "180/15", "180.15") ) %>%
+  dplyr::select( one_of(c( "Query_Species", "Query_Strain",  column_names))) 
+
+
+## Rank each query to subject blast searches.
+ranked_table <- cleaned_table  %>%
+  group_by( query_acc.ver  ) %>%
+  nest() %>%
+  mutate( data = purrr::map( data, function(x) { x %>% mutate( rank = row_number(evalue)) }  )) %>%
+  unnest(data) %>%
+  ungroup()
+
+hits_to_uniprot_table <- ranked_table  %>%
+   mutate( subject_uniprot_acc = ifelse( str_detect(subject_acc.ver, "|"), 
+                                         str_replace( subject_acc.ver, "(sp|tr)\\|(.*)\\|.*", "\\2"), 
+                                         NA) ) %>%
+  mutate ( Query_Species = case_when( Query_Species == "Klebsiella pneumoniae"  &
+                                      Query_Strain %in% c( "AJ055", "AJ292", "03-311-0071", "04153260899A") ~ "Klebsiella variicola",
+                                      TRUE ~ Query_Species))
+
+
+hits_to_uniprot_table %>%
+  distinct( Query_Species, Query_Strain)
+
+write_tsv( hits_to_uniprot_table, path=blast_to_uniprot_merged_file) 
+
+```
+
+## Summary statistics of How many proteins have Uniprot accession
+```{r}
+
+summary_statistics_hits_to_uniprot <-  function( hits_to_uniprot_table, my_e_value_cutoff ) {
+    hits_to_uniprot_summary_statistics <- hits_to_uniprot_table %>%
+      filter( evalue < my_e_value_cutoff  ) %>%
+      inner_join( chromosome_id_to_protein_id, by=c("query_acc.ver" = "protein_refseq_id") ) %>%
+      inner_join ( strain_to_accessions_cleaned, by =c("chromosome_refseq_id" = "chromosome_refseq_id", 
+                                                       "Query_Species" = "Species",
+                                                       "Query_Strain" = "Strain")) %>%
+      distinct(Query_Species, Query_Strain, chromosome_refseq_id, query_acc.ver ) %>%
+      group_by(Query_Species, Query_Strain, chromosome_refseq_id) %>%
+      summarise( num_proteins_in_pathways = n()) %>%
+      inner_join(  num_seq_per_accession, by=c("chromosome_refseq_id" = "chromosome_refseq_id")   ) %>%
+      dplyr::rename( total_num_proteins_in_proteome = "num_sequences") %>%
+      distinct()
+    
+    return( hits_to_uniprot_summary_statistics)
+    
+}
+
+
+summary_statistics_hits_to_uniprot_save_file <- function(hits_to_uniprot_table, my_e_value_cutoff ) { 
+  
+    kegg_annotations_dir <- file.path( oc_results_dir, "KEGG_Annotations",
+                                       paste( "E_value_", my_e_value_cutoff, sep=""), "Map_to_Uniprot" )
+
+    resutls_table <- summary_statistics_hits_to_uniprot( hits_to_uniprot_table, my_e_value_cutoff )
+    
+    write_tsv(resutls_table,
+              path=file.path(kegg_annotations_dir, 
+                             "mapping_uniprot_hits_summary_statistics.tsv") ) 
+}
+
+```
+
+
+# Convert from Hits to pathways
+```{r}
+
+convert_hits_to_pathways <- function( hits_to_uniprot_table, my_e_value_cutoff ) {
+  hits_to_pathways_table_cleaned <- hits_to_uniprot_table %>%
+      filter( evalue < my_e_value_cutoff  )  %>%
+      filter( str_detect( subject_acc.ver, "^(sp|tr)\\|")) %>%
+      inner_join( kegg_genes_to_uniprot_cleaned, by=c("subject_uniprot_acc" = "uniprot_acc_cleaned")) %>%
+      inner_join( kegg_genes_to_pathway_cleaned, by=c("kegg_entrez_id" = "kegg_entrez_id"))  %>%
+      filter( !is.na(kegg_pathway_id)) %>%
+      mutate( cleaned_kegg_pathway_id = str_replace( kegg_pathway_id, ".*(\\d{5}$)", "\\1")   ) %>%
+      ## Map protein hits to KEGG ortholog groups 
+      ## These KEGG ortholog groups represents proteins in the KEGG pathways. Duplicated proteins will have the same KEGG ortholog group label. 
+      inner_join(kegg_genes_to_ko, by=c("kegg_entrez_id" = "kegg_entrez_id") )     %>%
+      distinct() 
+  
+  return( hits_to_pathways_table_cleaned )
+}
+
+
+# hits_to_pathways_table_cleaned <- read_tsv( file=file.path(kegg_annotations_dir, "hits_to_pathways_uniprot_mapping.tsv") ) 
+
+```
+
+## Summary statistics of how many protein hits are mapped to KEGG pathways
+```{r}
+
+summary_statistics_hits_to_KEGG_pathways <-  function( hits_to_pathways_table_cleaned, my_e_value_cutoff ) {
+    hits_to_pathways_uniprot_summary_statistics <- hits_to_pathways_table_cleaned %>%
+      inner_join( chromosome_id_to_protein_id, by=c("query_acc.ver" = "protein_refseq_id") ) %>%
+      inner_join ( strain_to_accessions_cleaned, by =c("chromosome_refseq_id" = "chromosome_refseq_id", 
+                                                       "Query_Species" = "Species",
+                                                       "Query_Strain" = "Strain")) %>%
+      distinct(Query_Species, Query_Strain, chromosome_refseq_id, query_acc.ver ) %>%
+      group_by(Query_Species, Query_Strain, chromosome_refseq_id) %>%
+      summarise( num_proteins_in_pathways = n()) %>%
+      inner_join(  num_seq_per_accession, by=c("chromosome_refseq_id" = "chromosome_refseq_id")   ) %>%
+      dplyr::rename( total_num_proteins_in_proteome = "num_sequences") %>%
+      distinct()
+    
+    return( hits_to_pathways_uniprot_summary_statistics)
+    
+}
+
+```
+
+## Create function to loop through different e-values and then write the results to a different directory
+```{r}
+
+loop_evalues_map_hits_to_pathways_and_ko_groups <- function(my_hits_to_pathways_table, my_e_value_cutoff) {
+
+  print(paste(my_e_value_cutoff, "\n"))
+  
+  kegg_annotations_dir <- file.path( oc_results_dir, "KEGG_Annotations", paste( "E_value_", my_e_value_cutoff, sep=""), "Map_to_Uniprot" )
+    
+  my_hits_to_pathways_table_filt <- my_hits_to_pathways_table %>%
+                                    filter( evalue < my_e_value_cutoff  )
+  
+  hits_to_pathways_uniprot_summary_statistics <- summary_statistics_hits_to_KEGG_pathways(
+    my_hits_to_pathways_table_filt,
+    my_e_value_cutoff  )
+
+  write_tsv(hits_to_pathways_uniprot_summary_statistics, 
+            path=file.path(kegg_annotations_dir, 
+                           "mapping_uniprot_hits_to_pathways_summary_statistics.tsv") )
+  # dim(my_hits_to_pathways_table)
+  # dim(hits_to_pathway_ko_table)
+  
+  if( my_e_value_cutoff == best_e_value_to_use) {
+       write_tsv(my_hits_to_pathways_table_filt, path=file.path(kegg_annotations_dir, "mapping_uniprot_hits_to_pathways_and_ko.tsv") )
+  }
+
+  return()
+}
+```
+
+
+## Count how many query proteins are mapped to uniprot proteins
+```{r}
+  
+  
+partial_summary_uniprot <- purrr::partial( summary_statistics_hits_to_uniprot_save_file,
+                                           hits_to_uniprot_table=hits_to_uniprot_table )
+
+purrr::walk(list_of_e_values_to_test,  partial_summary_uniprot  )
+
+
+```
+
+
+
+## Test all of the e-values in a walk loop
+```{r}
+hits_to_pathways_table_cleaned <- convert_hits_to_pathways( hits_to_uniprot_table, 
+                                                            max( list_of_e_values_to_test) )
+
+rm(kegg_genes_to_uniprot_cleaned)
+rm( kegg_genes_to_pathway_cleaned)
+rm( kegg_genes_to_ko)
+
+partial_loop_evalues  <- purrr::partial( loop_evalues_map_hits_to_pathways_and_ko_groups, 
+                                         my_hits_to_pathways_table = hits_to_pathways_table_cleaned )
+
+purrr::walk(list_of_e_values_to_test,  partial_loop_evalues)
+
+```
+
+
+
