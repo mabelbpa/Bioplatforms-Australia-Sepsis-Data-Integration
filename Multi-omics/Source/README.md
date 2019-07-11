@@ -4,7 +4,7 @@
 
 The aim is to search the query protein sequences from bacterial strains of interest to find similar sequences in the Uniprot-SwissProt database using BlastP. Since the KEGG database contains information on the KEGG pathways annotations of Uniprot-SwissProt protein, we could transfer the KEGG pathways annotation to the query protein sequence based on homology. 
 
-### 1.1 Download Genomics Sequences and Data
+### 1.1 Downloading genomics sequences and data
 
 We have to download the protein sequences in FASTA format.
 
@@ -14,7 +14,7 @@ The plasmids for each bactrial strain are labelled from p01, p02, etc... ranked 
 
 * [Perl script for downloading the size of the chromosomes and plasmids](Multi-omics/Source/Download_Sequences/get_genome_size.pl)
 
-### 1.2 Performing BlastP Searches
+### 1.2 Performing BlastP searches
 
 * [Script for formatting the UniProt-SwissProt BlastP database on the UNSW Katana HPC PBS cluster](Multi-omics/Source/KEGG_mapping_SBI/make_blastdb_uniprot_sprot.sh)
 * [Script for formatting the FASTA sequences for the bacterial strains of interest, to enable reciprocal top-hits BlastP searches (code has been run but not fully relevant for KEGG annotations)](Multi-omics/Source/KEGG_mapping_SBI/make_blastdb_sepsis_strains_proteome.sh)
