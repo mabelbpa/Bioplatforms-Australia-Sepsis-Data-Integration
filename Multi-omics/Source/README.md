@@ -25,6 +25,9 @@ The plasmids for each bactrial strain are labelled from p01, p02, etc... ranked 
 * [R Notebook script for transferring KEGG annoations of similar UniProt seqeucnes to query protein from the bacterial strains of interest](Multi-omics/Source/KEGG_mapping_SBI/Map_To_Uniprot/parse_blast_sepsis_strain_to_uniprot.Rmd) **Warnings: requires at least 30 GB of RAM to run, otherwise it could hang up the computer.** 
 
 ### 1.4 Summary statistics of KEGG annotations for reporting and supplementary information
+
+* [R Notebook script for transferring KEGG annoations of similar UniProt seqeucnes to query protein from the bacterial strains of interest](Multi-omics/Source/KEGG_mapping_SBI/Map_To_Uniprot/parse_blast_sepsis_strain_to_uniprot.Rmd) **Warnings: requires at least 30 GB of RAM to run, otherwise it could hang up the computer.** 
+
 * [R Notebook script for calculating the summary statistics for each strain (e.g. percentage of proteins in the proteome annoatated with a KEGG pathway)](Multi-omics/Source/KEGG_mapping_SBI/Map_To_Uniprot/plot_summary_stats.Rmd)
 
 
