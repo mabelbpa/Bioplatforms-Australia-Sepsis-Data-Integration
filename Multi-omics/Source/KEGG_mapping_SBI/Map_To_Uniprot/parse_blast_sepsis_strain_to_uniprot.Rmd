@@ -4,6 +4,9 @@ output: html_notebook
 author: Ignaitus Pang ` i.pang at unsw.edu.au '
 ---
 
+
+Be kind to your future self, comment your codes. - Paraphrased from Sue Wilson
+
 ```{r}
 if( !require(pacman)) {
   install.packages("pacman")
@@ -32,6 +35,9 @@ nohup Rscript --vanilla -e "rmarkdown::render('parse_blast_sepsis_strain_to_unip
 
 
 ## Directories Management
+
+### Create output directories for storing results from applying a range of different BlastP E-value thresholds
+
 ```{r}
 
 purrr::map( list_of_e_values_to_test, function(my_e_value_cutoff ) {
@@ -39,65 +45,113 @@ purrr::map( list_of_e_values_to_test, function(my_e_value_cutoff ) {
   create_dir_if_not_exists(kegg_annotations_dir)
 } ) 
 
+```
+
+### Read in the KEGG database data
+```{r}
 kegg_dir <- file.path( owncloud_dir, "Annotations_and_Mapping/KEGG_data_files/genes/links")
 
-kegg_genes_to_uniprot_cleaned_file <- file.path( kegg_dir, "genes_uniprot.list")
-kegg_genes_to_pathway_cleaned_file <- file.path( kegg_dir, "genes_pathway.list")
-kegg_genes_to_ko_file <- file.path( kegg_dir, "genes_ko.list")
+kegg_genes_to_uniprot_cleaned_file <- file.path( kegg_dir, "genes_uniprot.list") # KEGG gene ID to UniProt accession table
+kegg_genes_to_pathway_cleaned_file <- file.path( kegg_dir, "genes_pathway.list") # Tablve for converting KEGG gene ID to KEGG pathway ID 
+kegg_genes_to_ko_file <- file.path( kegg_dir, "genes_ko.list") # Table for converting KEGG gene ID to KEGG ortholog (ko) group ID 
+```
 
+### System glob path for finding all the BlastP outputs
+```{r}
 blast_to_uniprot_file_path <- file.path( oc_results_dir, "Blast_Strain_To_Uniprot_DB/TSV/*")
+```
 
+### Save all of the BlastP results into one file for easy management later 
+```{r}
 create_dir_if_not_exists(file.path( oc_results_dir,
                                            "Blast_Strain_To_Uniprot_DB/Merged_TSV/") )
 
 blast_to_uniprot_merged_file <- file.path( oc_results_dir,
                                            "Blast_Strain_To_Uniprot_DB/Merged_TSV/blast_to_uniprot_merged.tsv")
 
-
 ```
 
 
 ## Read Genome statistics
+I thought I will be a bit more thorough in listing the columns descriptions (more than usual) for this section because it could be hard to understand without these information or opening the Excel file containing the information. 
 ```{r}
+
+## The Excel file containing a number of tables with information about the Genomes
 genome_statistics_file <- file.path( data_dir, "Genomes_List/num_seq_per_strain_and_accession.xlsx") 
 
+# Table: num_seq_per_accession 
+# Description: The number of protein sequences per chromosome / plasmid
+# Column 1: chromosome_refseq_id, character, e.g. NZ_LR129840.1
+# Column 2: num_sequences, integer, e.g. 2075
 num_seq_per_accession  <- read_xlsx(path=genome_statistics_file, sheet="num_seq_per_accession")
+
+# table: strain_to_accessions
+# Description: Get information about the Species and Strain name as compared to the Chromosome/Plasmid RefSeq ID
+# Column 1: Species, text, e.g. Streptococcus pyogenes	
+# Column 2: Strain, text, e.g. HKU419
+# Column 3: refseq_ids, text, e.g. NZ_LR595848.1; NZ_LR595849.1	
+#  (The chormosome RefSeq ID. Note that there could be multiple RefSeq ID per line separate by semi-colons and spaces.
+#   Some cleaning is done below to clean this up).
+# Column 4: Species_strain_file_name, e.g. Streptococcus.pyogenes.HKU419.faa	
+# Column 5: List_of_files_to_concat, e.g. NZ_LR595848.1.faa NZ_LR595849.1.faa 
+#           (The list of files to concatenate together, including the files containing the chromosomes and plasmids)
 strain_to_accessions   <- read_xlsx(path=genome_statistics_file, sheet="strain_to_accessions")
+
+# Table: chromosome_id_to_protein_id
+# Description: Get all the Protein RefSeq ID associated with each Chromosome / Plasmid RefSeq ID
+# Column 1: chromosome_refseq_id
+# Column 2: protein_refseq_id
+# Column 3: protein_description
 chromosome_id_to_protein_id <- read_xlsx(path=genome_statistics_file, sheet="chromosome_id_to_protein_id")
 
+# Table: strain_to_accessions_cleaned
+# Description: Convert Species and Strain name to chromosome/plasmid RefSeq ID. 
+#   Clean the refseq_id column using the 'separate_rows' fucntion such that there 
+#   is only one refseq_id per row. 
+# Column 1: Species, text, e.g. Streptococcus pyogenes	
+# Column 2: Strain, text, e.g. HKU419
+# Column 1: chromosome_refseq_id, character, e.g. NZ_LR129840.1
 strain_to_accessions_cleaned <- strain_to_accessions %>%
                                 dplyr::select( Species, Strain, refseq_ids) %>%
                                 separate_rows( refseq_ids, sep = "; ") %>%
                                 dplyr::rename( chromosome_refseq_id = "refseq_ids")
 
+# table: num_seq_per_accession 
+# Description: The number of protein sequences per chromosome / plasmid
+# Column 1: chromosome_refseq_id, character, e.g. NZ_LR129840.1
+# Column 2: num_sequences, integer, e.g. 2075
 num_seq_per_accession_cleaned <- strain_to_accessions_cleaned %>% 
                                  left_join( num_seq_per_accession, by=c("chromosome_refseq_id" = "chromosome_refseq_id") ) 
 
 ```
 
-# https://www.lucidchart.com/pages/ER-diagram-symbols-and-meaning
-## Read KEGG Pathway table cleaned
+## Cleaning the KEGG Database tables 
+Lucid Chart is the program I've used to draw the entity-relationships diagram in the Google Doc file (https://www.lucidchart.com/documents/edit/bacc75e2-392e-420e-88d1-e62b75ebe939/0?callback=close&name=docs&callback_type=back&v=2025&s=592).
+
+https://www.lucidchart.com/pages/ER-diagram-symbols-and-meaning
+
 ```{r}
-kegg_genes_to_uniprot_cleaned <- read_tsv(kegg_genes_to_uniprot_cleaned_file, col_names = FALSE)                                 
+kegg_genes_to_uniprot_cleaned  <- read_tsv(kegg_genes_to_uniprot_cleaned_file, col_names = FALSE)                                 
 kegg_genes_to_pathway_cleaned  <- read_tsv(kegg_genes_to_pathway_cleaned_file, col_names = FALSE)
-kegg_genes_to_ko <- read_tsv(kegg_genes_to_ko_file, col_names = FALSE)
+kegg_genes_to_ko               <- read_tsv(kegg_genes_to_ko_file, col_names = FALSE)
 
 colnames( kegg_genes_to_uniprot_cleaned  ) <- c("kegg_entrez_id", "uniprot_acc")
 colnames( kegg_genes_to_pathway_cleaned  ) <- c("kegg_entrez_id", "kegg_pathway_id")
 colnames( kegg_genes_to_ko  ) <- c("kegg_entrez_id", "kegg_ko_id")
 
-
 kegg_genes_to_uniprot_cleaned <-   kegg_genes_to_uniprot_cleaned %>% 
+          # Convert the uniprot_acc (e.g. up:P11245) to the uniprot_acc_cleaned (e.g. P11245)
+          # by removing the prefix. 
 					mutate( uniprot_acc_cleaned = str_replace_all( uniprot_acc, "^.*:", ""))
 
 
 ```
 
-
-## Read Blast outputs
+## Read BlastP outputs
 ```{r}
 list_of_files <- Sys.glob( blast_to_uniprot_file_path )
 
+## Assign the column names 
 column_names <- c("query_acc.ver", "subject_acc.ver", "perc_identity", 
                   "alignment_length", "mismatches", "gap_opens", 
                   "q_start", "q_end", "s_start", "s_end", 
@@ -105,7 +159,7 @@ column_names <- c("query_acc.ver", "subject_acc.ver", "perc_identity",
 
 ```
 
-### Merge the tables together
+### Merge the BlastP ouptut tables together
 ```{r, include=TRUE, results="hide"}
 list_of_tables <- purrr::map( list_of_files, function(x) {
  #  print(x)
@@ -121,11 +175,12 @@ names(list_of_tables) <- str_replace_all( list_of_files, ".*/(.*).tab", "\\1")  
 
 ```
 
-## Clean up the table and rank the hits by e-values
+## Clean up the BlastP output table and rank the hits by e-values
 ```{r}
 
 # head( list_of_tables[[1]])
 
+# The Comparison column contain the Strain and Species name and a suffix, this need to cleaned up 
 cleaned_table <- bind_rows( list_of_tables, .id= "Comparison")  %>%
   filter( str_detect( subject_acc.ver, "^(sp|tr)\\|")) %>%
   separate(col="Comparison",  sep ="[-\\.]", into=c("Query_a", "Query_b", "Query_Strain")) %>%
@@ -137,7 +192,7 @@ cleaned_table <- bind_rows( list_of_tables, .id= "Comparison")  %>%
   dplyr::select( one_of(c( "Query_Species", "Query_Strain",  column_names))) 
 
 
-## Rank each query to subject blast searches.
+## Rank each query to subject blast searches by the E-value score.
 ranked_table <- cleaned_table  %>%
   group_by( query_acc.ver  ) %>%
   nest() %>%
@@ -146,9 +201,11 @@ ranked_table <- cleaned_table  %>%
   ungroup()
 
 hits_to_uniprot_table <- ranked_table  %>%
+    ## Extract the Uniprot Accession number of the hit
    mutate( subject_uniprot_acc = ifelse( str_detect(subject_acc.ver, "|"), 
                                          str_replace( subject_acc.ver, "(sp|tr)\\|(.*)\\|.*", "\\2"), 
                                          NA) ) %>%
+  # Clean up species and strain for Klebsiella pneumoniae versus Klebsiella variicola"
   mutate ( Query_Species = case_when( Query_Species == "Klebsiella pneumoniae"  &
                                       Query_Strain %in% c( "AJ055", "AJ292", "03-311-0071", "04153260899A") ~ "Klebsiella variicola",
                                       TRUE ~ Query_Species))
@@ -161,9 +218,8 @@ write_tsv( hits_to_uniprot_table, path=blast_to_uniprot_merged_file)
 
 ```
 
-## Summary statistics of How many proteins have Uniprot accession
+## Summary statistics of how many proteins have UniProt accession
 ```{r}
-
 summary_statistics_hits_to_uniprot <-  function( hits_to_uniprot_table, my_e_value_cutoff ) {
     hits_to_uniprot_summary_statistics <- hits_to_uniprot_table %>%
       filter( evalue < my_e_value_cutoff  ) %>%
@@ -198,7 +254,7 @@ summary_statistics_hits_to_uniprot_save_file <- function(hits_to_uniprot_table, 
 ```
 
 
-# Convert from Hits to pathways
+# Convert from BlastP Hits to KEGG pathways
 ```{r}
 
 convert_hits_to_pathways <- function( hits_to_uniprot_table, my_e_value_cutoff ) {
@@ -277,8 +333,6 @@ loop_evalues_map_hits_to_pathways_and_ko_groups <- function(my_hits_to_pathways_
 
 ## Count how many query proteins are mapped to uniprot proteins
 ```{r}
-  
-  
 partial_summary_uniprot <- purrr::partial( summary_statistics_hits_to_uniprot_save_file,
                                            hits_to_uniprot_table=hits_to_uniprot_table )
 
@@ -287,9 +341,7 @@ purrr::walk(list_of_e_values_to_test,  partial_summary_uniprot  )
 
 ```
 
-
-
-## Test all of the e-values in a walk loop
+## Test all of the E-values in a purr::walk loop
 ```{r}
 hits_to_pathways_table_cleaned <- convert_hits_to_pathways( hits_to_uniprot_table, 
                                                             max( list_of_e_values_to_test) )
