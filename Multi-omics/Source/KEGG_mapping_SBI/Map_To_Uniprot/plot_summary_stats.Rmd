@@ -36,7 +36,6 @@ best_e_value_to_use <- 10^-3
 
 ```
 
-
 ## Directories Management
 ```{r}
 
@@ -70,7 +69,6 @@ names( list_of_files_uniprot) <- list_of_evalue_thresholds_uniprot
 
 ```
 
-
 ## Get information and data about the genomes
 ```{r}
 genome_statistics_file <- file.path( data_dir, "Genomes_List/num_seq_per_strain_and_accession.xlsx") 
@@ -84,7 +82,8 @@ chromosomes_and_plasmids_names <- read_tsv( file.path( data_dir, "Genomes_List/c
 
 ```
 
-## Number of sequences per chromosome
+## Plot the number of protein sequences within each chromosome
+The number of proteins (y-axis) encoded in the chromosomes of bacterial strains of interest (x-axis). 
 ```{r}
 num_sequences_per_chromosome <- chromosomes_and_plasmids_names %>%
   filter( Species != "Streptococcus pneumoniae" ) %>%
@@ -107,9 +106,8 @@ ggsave( plot=num_sequences_per_chromosome,
 
 ```
 
-
-
-## Number of sequences per plasmid
+## Plot the number of protein sequences within each plasmid
+The number of proteins (y-axis) from the plasmid-derived proteome of each bacterial strain (x-axis). 
 ```{r}
 num_sequences_per_plasmid <- chromosomes_and_plasmids_names %>%
   filter( Species != "Streptococcus pneumoniae" ) %>%
@@ -135,9 +133,7 @@ ggsave( plot=num_sequences_per_plasmid_ggplot,
 
 ```
 
-
-
-## Query proteins mapped to uniprots stats 
+## Query proteins mapped to uniprots statistics 
 ```{r}
 
 hits_to_uniprot_stats <-  purrr::map( list_of_files_uniprot, read_tsv )  %>%
@@ -154,6 +150,7 @@ hits_to_uniprot_stats
 ```
 
 ## Percentage of proteins in chromosome mapped to Uniprot proteins versus different E-values threshold
+The percentage of proteins encoded in the chromosomes that were matched to similar a UniProt-SwissProt sequence using BlastP (y-axis) for a range of E-value thresholds (x-axis).
 ```{r}
 perc_mapped_to_uniprot_vs_e_values <- hits_to_uniprot_stats %>%
   filter( type == "Chromosomes") %>%
@@ -176,6 +173,7 @@ ggsave( plot=perc_mapped_to_uniprot_vs_e_values,
 
 
 ## Percentage of proteins in plasmids mapped to Uniprot proteins versus different E-values threshold
+The percentage of proteins from the plasmid-derived proteome that were matched to a UniProt-SwissProt sequence by BlastP (y-axis) across a range of E-value thresholds (x-axis). 
 ```{r}
 perc_mapped_to_uniprot_vs_e_values_plasmids <- hits_to_uniprot_stats %>%
   left_join( chromosomes_and_plasmids_names, by =c( "chromosome_refseq_id")) %>%
@@ -198,7 +196,7 @@ ggsave( plot=perc_mapped_to_uniprot_vs_e_values_plasmids,
 
 ```
 
-## Hits to pathways stats 
+## Hits to pathways statistics 
 ```{r}
 hits_to_pathways_stats <-  purrr::map( list_of_files, read_tsv )  %>%
                           bind_rows( .id="e_values") %>%
@@ -227,6 +225,7 @@ hits_to_pathways_stats
 ```
 
 ## Percentage of proteins in chromosome mapped to pathways versus different E-values threshold
+The accession of UniProt-SwissProt sequences that passed the E-value thresholds were searched against the KEGG pathways database to check if the UniProt entries had  KEGG pathways annotations. The percentage of proteins encoded in the chromosome that were matched to at least one KEGG pathway (y-axis), in which the annotated ortholog SwissProt sequences were filtered across a range of E-value thresholds (x-axis). The number of proteins with similar UniProt sequences and the number of proteins annotated with KEGG pathways plateaued at E-value of 10-1. This suggests that the matches were saturated at E-value of around 10-2 and that false positive hits are more likely above this threshold E-value.  
 ```{r}
 perc_mapped_to_pathways_vs_e_values <- hits_to_pathways_stats %>%
   filter( type == "Chromosomes") %>%
@@ -250,6 +249,7 @@ ggsave( plot=perc_mapped_to_pathways_vs_e_values,
 
 
 ## Percentage of proteins in plasmids mapped to pathways versus different E-values threshold
+The accession of UniProt-SwissProt sequences that passed the E-value thresholds were searched against the KEGG pathways database to check if the UniProt entries were associated with KEGG pathways. This acts as a means to transfer KEGG annotations from a UniProt-SwissProt entry to the query protein from the bacterial species of interest. The percentage of proteins from the plasmid-derived proteome that were matched to at least one KEGG pathway (y-axis) for which the UniProt-SwissProt sequences were filtered at different E-value thresholds (x-axis). There is a high diversity in the number of proteins coded within plasmids. While 50% of proteins in most plasmids have similar sequences in the UniProt-SwissProt database, most of these proteins could not be mapped to KEGG pathways. This suggests the functions of proteins encoded within plasmids are often poorly characterized or not known to be part of canonical biological pathways.
 ```{r}
 
 list_of_e_values_to_test <-  c(  10^-6, 10^-5, 10^-4, 10^-3, 10^-2, 10^-1, 1 ) 
@@ -341,14 +341,8 @@ ggsave( plasmids_based_analysis_plots,
 
 ```
 
-
-
-
-
-
-
-
-## Number of proteins mapped to pathways for each of the bacterial strains
+## The proportion of proteins from the chromosomes that were annotated with KEGG pathways at E-value threshold of 10-3.
+The y-axis showed the proportion of proteins from each chromosome that were associated with at least one pathway (blue) and the proportion of proteins from each chromosome that were not associated with any pathway (red). The number of proteins corresponding to each region of the bar plot were also labelled in the graph. The strains are shown in the x-axis. The results showed that different strains of the same species had similar proportion of proteins annotated with KEGG pathways.
 ```{r}
 proteins_with_annotaions <- read_tsv(file.path( kegg_annotations_dir, paste("E_value_", best_e_value_to_use, sep="" ), 
                                       "Map_to_Uniprot", "mapping_uniprot_hits_to_pathways_summary_statistics.tsv"))  %>%
@@ -393,10 +387,12 @@ ggsave( plot=chromosomes_plot,
                         "proteins_in_chromosomes_mapped_to_pathways.png"), 
         width=10,
         height=10)
+```
 
 
-
-## Plot for plasmids
+## The proportion of proteins from plasmids that were annotated with KEGG pathways at E-value threshold of 10-3. 
+The y-axis showed the proportion of proteins from each plasmid that were associated with at least one pathway (blue) and the proportion of proteins from each chromosome that were not associated with any pathway (red). The number of proteins corresponding to each region of the bar plot were also labelled in the graph. The strains and plasmids IDs were shown in the x-axis. The results showed that only a small proportion of proteins encoded in the plasmids could be associated with KEGG pathways.
+```{r}
 plasmids_plot <- proteins_with_annotaions_cleaned %>% 
   filter( type == "Plasmids") %>%
   ggplot( aes( sequence_name,  values, fill= str_wrap(data_type, width=20) )) +
