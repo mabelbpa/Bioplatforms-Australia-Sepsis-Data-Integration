@@ -357,5 +357,37 @@ purrr::walk(list_of_e_values_to_test,  partial_loop_evalues)
 
 ```
 
+## Generate the RefSeq ID to KEGG pathway ID lookup table
+```{r}
+
+kegg_annotations_my_evalue_dir <- file.path( oc_results_dir, 
+                                              "KEGG_Annotations", 
+                                              paste( "E_value_", 
+                                                     best_e_value_to_use, 
+                                                     sep=""), 
+                                              "Map_to_Uniprot" )
+
+my_hits_to_pathways_table_filt <- read_tsv( file=file.path(kegg_annotations_my_evalue_dir, 
+                                  "mapping_uniprot_hits_to_pathways_and_ko.tsv") )
+
+
+refseq_id_to_kegg_pathway_id_table <- my_hits_to_pathways_table_filt %>%
+  distinct( query_acc.ver, Query_Species, Query_Strain, 
+            cleaned_kegg_pathway_id)
+
+
+write_tsv(refseq_id_to_kegg_pathway_id_table, 
+          path=file.path(kegg_annotations_my_evalue_dir,
+                         "refseq_id_to_kegg_pathway_id_table.tsv") )
+
+
+```
+
+
+
+
+
+
+
 
 
