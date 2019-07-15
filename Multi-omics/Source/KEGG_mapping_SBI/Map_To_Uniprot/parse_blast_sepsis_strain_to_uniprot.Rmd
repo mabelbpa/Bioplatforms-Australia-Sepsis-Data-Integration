@@ -51,7 +51,7 @@ purrr::map( list_of_e_values_to_test, function(my_e_value_cutoff ) {
 
 ```
 
-### Read in the KEGG database data
+### File names for the KEGG database data
 ```{r}
 kegg_dir <- file.path( owncloud_dir, "Annotations_and_Mapping/KEGG_data_files/genes/links")
 
@@ -398,10 +398,7 @@ my_hits_to_pathways_table_filt <- read_tsv( file=file.path(kegg_annotations_my_e
 
 refseq_id_to_kegg_pathway_id_table <- my_hits_to_pathways_table_filt %>%
   distinct( query_acc.ver, Query_Species, Query_Strain, 
-            kegg_pathway_id) %>%
-  # mutate( cleaned_kegg_pathway_id = str_replace( kegg_pathway_id, ".*(\\d{5}$)", "\\1")   )  %>%
-  dplyr::select( - kegg_pathway_id) %>%
-  distinct()
+            cleaned_kegg_pathway_id) 
   
 
 write_tsv(refseq_id_to_kegg_pathway_id_table, 
