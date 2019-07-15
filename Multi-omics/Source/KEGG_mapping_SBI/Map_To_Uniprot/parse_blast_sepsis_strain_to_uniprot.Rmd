@@ -16,7 +16,9 @@ if( !require(pacman)) {
 p_load(tidyverse)
 p_load(here)
 p_load(readxl)
-
+p_load(vroom)
+library(mutidplyr)
+ 
 base_dir <- here::here()
 
 source( file.path( base_dir, "Source/Common/common_parameters.R") )
@@ -58,7 +60,7 @@ kegg_genes_to_ko_file <- file.path( kegg_dir, "genes_ko.list") # Table for conve
 
 ### System glob path for finding all the BlastP outputs
 ```{r}
-blast_to_uniprot_file_path <- file.path( oc_results_dir, "Blast_Strain_To_Uniprot_DB/TSV/*")
+blast_to_uniprot_file_path <- file.path( oc_results_dir, "Blast_Strain_To_Uniprot_DB/TSV")
 ```
 
 ### Save all of the BlastP results into one file for easy management later 
@@ -147,50 +149,48 @@ kegg_genes_to_uniprot_cleaned <-   kegg_genes_to_uniprot_cleaned %>%
 
 ```
 
-## Read BlastP outputs
-```{r}
-list_of_files <- Sys.glob( blast_to_uniprot_file_path )
 
-## Assign the column names 
+### Read BlastP outputs and merge the BlastP ouptut tables together
+```{r}
 column_names <- c("query_acc.ver", "subject_acc.ver", "perc_identity", 
                   "alignment_length", "mismatches", "gap_opens", 
                   "q_start", "q_end", "s_start", "s_end", 
                   "evalue", "bit_score")
 
-```
+list_of_files <- fs::dir_ls(path = blast_to_uniprot_file_path,
+                            glob = "*")
 
-### Merge the BlastP ouptut tables together
-```{r, include=TRUE, results="hide"}
-list_of_tables <- purrr::map( list_of_files, function(x) {
- #  print(x)
-  my_table <- read_tsv(x, comment = "#", col_names = FALSE)  
-  colnames(my_table) <- column_names
-  return(my_table)
-  })   
+## Read in the files using vroom
+temp_table <- vroom(list_of_files, id="Comparison", col_names =column_names, comment="#", delim ="\t" )  
 
-names(list_of_tables) <- str_replace_all( list_of_files, ".*/(.*).tab", "\\1")  %>%
+cleaned_table <- temp_table %>%
+                ## Clean the file names so that '-' is only used to separate the Species name and the 
+                ## strain name within the file name. 
+                mutate( Comparison =  str_replace_all( Comparison, ".*/(.*).tab", "\\1")  %>%
                          str_replace_all( "03-311-0071", "03/311/0071"  ) %>%
                          str_replace_all( "180.2", "180/2") %>%
-                         str_replace_all( "180.15", "180/15")        
+                         str_replace_all( "180.15", "180/15")        ) %>%
+                ## Filter the Uniprot accessions, only take the input file if the Subject Database is a Uniprot Entry
+                filter( str_detect( subject_acc.ver, "^(sp|tr)\\|")) %>%
+                ## Separate the Species and the Strain from the file names
+                separate(col="Comparison",  sep ="[-\\.]", into=c("Query_a", "Query_b", "Query_Strain")) %>%
+                mutate( Query_Species = paste(Query_a,  Query_b))  %>%
+                dplyr::select ( -Query_a, -Query_b ) %>%
+                ## Clean up the strain names
+                mutate( Query_Strain = str_replace( Query_Strain,  "03/311/0071", "03-311-0071") %>%
+                                       str_replace_all( "180/2", "180.2") %>%
+                                       str_replace_all( "180/15", "180.15") ) %>%
+                dplyr::select( one_of(c( "Query_Species", "Query_Strain",  column_names))) 
+
+rm(temp_table)
+
 
 ```
+
+
 
 ## Clean up the BlastP output table and rank the hits by e-values
 ```{r}
-
-# head( list_of_tables[[1]])
-
-# The Comparison column contain the Strain and Species name and a suffix, this need to cleaned up 
-cleaned_table <- bind_rows( list_of_tables, .id= "Comparison")  %>%
-  filter( str_detect( subject_acc.ver, "^(sp|tr)\\|")) %>%
-  separate(col="Comparison",  sep ="[-\\.]", into=c("Query_a", "Query_b", "Query_Strain")) %>%
-  mutate( Query_Species = paste(Query_a,  Query_b))  %>%
-  dplyr::select ( -Query_a, -Query_b ) %>%
-  mutate( Query_Strain = str_replace( Query_Strain,  "03/311/0071", "03-311-0071") %>%
-                         str_replace_all( "180/2", "180.2") %>%
-                         str_replace_all( "180/15", "180.15") ) %>%
-  dplyr::select( one_of(c( "Query_Species", "Query_Strain",  column_names))) 
-
 
 ## Rank each query to subject blast searches by the E-value score.
 ranked_table <- cleaned_table  %>%
