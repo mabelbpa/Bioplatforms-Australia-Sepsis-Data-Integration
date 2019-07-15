@@ -259,7 +259,7 @@ convert_hits_to_pathways <- function( hits_to_uniprot_table, my_e_value_cutoff )
       ## These KEGG ortholog groups represents proteins in the KEGG pathways. Duplicated proteins will have the same KEGG ortholog group label. 
       inner_join(kegg_genes_to_ko, by=c("kegg_entrez_id" = "kegg_entrez_id") )     %>%
       distinct() %>%
-      group_by(Query_Species, Query_Strain, query_acc.ver, kegg_pathway_id, kegg_ko_id ) %>%
+      group_by(Query_Species, Query_Strain, query_acc.ver, kegg_pathway_id, cleaned_kegg_pathway_id, kegg_ko_id ) %>%
       # partition(Query_Species, Query_Strain, query_acc.ver, kegg_pathway_id, kegg_ko_id, .cluster = cluster) %>%
       summarise( evalue = min(evalue)) %>%
       # collect() %>%
@@ -398,7 +398,11 @@ my_hits_to_pathways_table_filt <- read_tsv( file=file.path(kegg_annotations_my_e
 
 refseq_id_to_kegg_pathway_id_table <- my_hits_to_pathways_table_filt %>%
   distinct( query_acc.ver, Query_Species, Query_Strain, 
-            cleaned_kegg_pathway_id)
+            kegg_pathway_id) %>%
+  # mutate( cleaned_kegg_pathway_id = str_replace( kegg_pathway_id, ".*(\\d{5}$)", "\\1")   )  %>%
+  dplyr::select( - kegg_pathway_id) %>%
+  distinct()
+  
 
 write_tsv(refseq_id_to_kegg_pathway_id_table, 
           path=file.path(kegg_annotations_my_evalue_dir,
