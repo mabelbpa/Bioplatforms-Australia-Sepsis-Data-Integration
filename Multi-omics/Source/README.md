@@ -34,5 +34,14 @@ The plasmids for each bactrial strain are labelled from p01, p02, etc... ranked 
 * [R Notebook script for calculating the summary statistics for each strain (e.g. percentage of proteins in the proteome annoatated with a KEGG pathway)](Multi-omics/Source/KEGG_mapping_SBI/Map_To_Uniprot/plot_summary_stats.Rmd)
 
 
+### 1.5 Strain specific percent coverage of protein nodes for each KEGG pathway
+
+* [R Notebook script for parsing KGML KEGG ortholog reference pathways](Multi-omics/Source/KEGG_mapping_SBI/Map_To_Uniprot/parse_kegg_ko_pathways_kgml.Rmd)
+
+* [R Notebook script for calculating the percent coverage of protein nodes for each KEGG pathway and each strain](Multi-omics/Source/KEGG_mapping_SBI/Map_To_Uniprot/plot_perc_kegg_pathway_mapped.Rmd) 
+
+
+
+
 
 
