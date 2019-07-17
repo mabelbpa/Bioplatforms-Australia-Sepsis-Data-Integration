@@ -1,0 +1,130 @@
+---
+title: "Parse KEGG pathways KGML entities"
+output: html_notebook
+---
+
+## Manage Libraries 
+```{r}
+
+
+if( !require(pacman)) {
+  install.packages("pacman")
+  library(pacman)
+}
+
+p_load(XML)
+p_load("methods")
+p_load(rvest)
+p_load(tidyverse)
+
+base_dir <- here::here() # "/home/ignatius/PostDoc/2019/Sepsis"
+source( file.path( base_dir, "Source/Common/helper_functions.R") )
+source( file.path( base_dir, "Source/Common/common_parameters.R") )
+```
+
+## Directories Management
+```{r}
+
+non_metabolism_kgml_dir <- file.path( owncloud_dir, "Annotations_and_Mapping/KEGG_data_files/xml/kgml/non-metabolism")
+metabolism_kgml_dir <- file.path( owncloud_dir, "Annotations_and_Mapping/KEGG_data_files/xml/kgml/metabolism")
+kegg_annoations_dir <- file.path( owncloud_dir, "Multi-omics/Results/KEGG_Annotations" ) 
+
+```
+
+## An example KGML file for testing 
+```{r}
+# example_kgml_file <- read_xml( file.path( non_metabolism_kgml_dir, "ko/ko01501.xml") )
+```
+
+## Function to parse the KGML dta 
+```{r}
+
+parse_one_file <- function( example_kgml_obj) {
+  
+  ## Get the pathway ID (e.g. path:ko00010)
+  pathway_id <- example_kgml_obj %>% 
+    xml_node( xpath = '/pathway/@name') %>% 
+    xml_text()  
+  
+  ## Get the pathway title (e.g. Glycolysis / Gluconeogenesis)
+  pathway_title <- example_kgml_obj %>% 
+    xml_node( xpath = '/pathway/@title') %>% 
+    xml_text()  
+  
+  ## Parse information on individual node in the pathway / network 
+  pathway_ko_table <-  example_kgml_obj %>% 
+    xml_nodes( xpath = '/pathway/entry')  %>%
+    map_df( ~{
+      
+      ## Parse the entry name, which is a list of KEGG ortholog (KO) group IDs
+      ## (e.g. ko:K01623 ko:K01624 ko:K01622 ko:K11645 ko:K16305 ko:K16306)
+      entry_name <- xml_node(.x, xpath = '@name') %>% 
+        xml_text()  
+      
+      ## Parse the entry ID, which is the node ID specific to each pathway
+      ## (e.g. 14). It is always an integer. 
+      entry_id   <- xml_node(.x, xpath = '@id') %>% 
+        xml_text()  
+      
+      ## Get the type of node in the KEGG pathway 
+      ## (e.g. ortholog, compound, map, brite, group, other ). 
+      ## Ortholog is a KO group
+      ## Map is a link to another KEGG pathway 
+      ## Brite is a hierarchical group
+      ## Group: Nodes that are placed together on the KEGG map because 
+      ##  they are part of the same protein complex. Infomation not complete 
+      ##  as there are child XML components not parsed.
+      ## Other: The only entry for now is a Brite object. 
+      entry_type <- xml_node(.x, xpath = '@type') %>% 
+        xml_text()  
+      
+      parsed_data_frame <- data.frame(pathway_id, 
+                                      pathway_title, 
+                                      entry_name, 
+                                      entry_id, 
+                                      entry_type, 
+                                      stringsAsFactors = FALSE)
+      
+      return( parsed_data_frame ) 
+    }) 
+  
+  return(pathway_ko_table)
+  
+}
+
+```
+
+## Parse the KGML files and write the data into a file 
+```{r}
+
+## Parse non-metabolism KGML files 
+list_of_non_metabolism_xml_file <-  Sys.glob(file.path( non_metabolism_kgml_dir, "ko/*.xml") ) 
+
+non_metabolism_pathway_ko_table_merged <- purrr::map( list_of_non_metabolism_xml_file,   read_xml ) %>%
+  purrr::map_df( parse_one_file ) %>%
+  bind_rows() %>%
+  mutate( kgml_type = "non-metabolism")
+
+## Parse metabolism KGML files 
+list_of_metabolism_xml_file <-  Sys.glob(file.path( metabolism_kgml_dir, "ko/*.xml") ) 
+
+metabolism_pathway_ko_table_merged <- purrr::map( list_of_metabolism_xml_file,   read_xml ) %>%
+  purrr::map_df( parse_one_file ) %>%
+  bind_rows() %>%
+  mutate( kgml_type = "metabolism")
+
+## Merge the non-metabolism and metabolism KGML files into one table 
+full_pathway_ko_table_merged <- metabolism_pathway_ko_table_merged %>%
+  bind_rows( non_metabolism_pathway_ko_table_merged)
+
+## Output the KGML data into a file 
+write_tsv(full_pathway_ko_table_merged, path=file.path( kegg_annoations_dir, "KEGG_ko_tables", "ko_kgml_nodes_list.tsv" ))
+
+
+```
+
+
+
+
+
+
