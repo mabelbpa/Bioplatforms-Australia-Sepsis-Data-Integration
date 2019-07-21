@@ -4,6 +4,10 @@
 
 The aim is to search the query protein sequences from bacterial strains of interest to find similar sequences in the Uniprot-SwissProt database using BlastP. Since the KEGG database contains information on the KEGG pathways annotations of Uniprot-SwissProt protein, we could transfer the KEGG pathways annotation to the query protein sequence based on homology. 
 
+### 1.0 Sofware Packages
+
+RStudio and the latest version of R is required to run the R notebooks. Currently, the latest development version of tidyr R library is needed for the pivot_long and pivot_wide functions, which will be integrated into the full release in the near future. To install the development version of tidyr, please run the command: *devtools::install_github("tidyverse/tidyr")*. 
+
 ### 1.1 Downloading genomics sequences and data
 
 We have to download the protein sequences in FASTA format.
