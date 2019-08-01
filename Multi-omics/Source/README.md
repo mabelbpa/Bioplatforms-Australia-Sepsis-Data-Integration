@@ -8,6 +8,8 @@ The aim is to search the query protein sequences from bacterial strains of inter
 
 RStudio and the latest version of R is required to run the R notebooks. Currently, the latest development version of tidyr R library is needed to use the *pivot_long* and *pivot_wide* functions. Both *pivot_long* and *pivot_wide* will be integrated into the full release of tidyr in the near future. To install the development version of tidyr, please run the command: *devtools::install_github("tidyverse/tidyr")*. 
 
+Perl tool to remove duplicated FASTA Sequences: [https://metacpan.org/pod/FAST](https://metacpan.org/pod/FAST)
+
 ### 1.2 Downloading genomics sequences and data
 
 We have to download the protein sequences in FASTA format.
