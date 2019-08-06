@@ -117,7 +117,7 @@ organism_id_vs_pathway_id_table <- kegg_genes_to_pathway_cleaned %>%
   dplyr::select( -kegg_pathway_id )
 
 
-taxonomy_table_first <- read_tsv(pipe(paste("awk 'BEGIN {is_include=0;}", 
+taxonomy_table <- read_tsv(pipe(paste("awk 'BEGIN {is_include=0;}", 
                                      " /^\\# Prokaryotes/ {is_include=1;}",
                                      " /^\\## Archaea/ {is_include=0;}", 
                                      "{if(is_include==1){print;}}", "'  < ", 
@@ -129,18 +129,6 @@ taxonomy_table_first <- read_tsv(pipe(paste("awk 'BEGIN {is_include=0;}",
                                   "organism_name"))
 
 
-taxonomy_table_second <- read_tsv(pipe(paste("awk 'BEGIN {is_include=0;}", 
-                                     " /^\\# Prokaryotes/ {is_include=1;}",
-                                     " /^\\## Archaea/ {is_include=0;}", 
-                                     "{if(is_include==1){print;}}", "'  < ", 
-                                     kegg_taxonomy_file," | grep '^#'")), 
-                           col_names = "organism_id")  %>%
-                         mutate( organism_id = str_replace_all( organism_id, "^\\#+\\s", "") %>%
-                                                str_to_lower())
-
-taxonomy_table <- taxonomy_table_first %>%
-                  bind_rows(taxonomy_table_second)
-
 all_prokaryotes_pathways <- taxonomy_table %>%
                                dplyr::select( organism_id ) %>% 
                                left_join( organism_id_vs_pathway_id_table, by= c( "organism_id") ) %>%
@@ -149,7 +137,7 @@ all_prokaryotes_pathways <- taxonomy_table %>%
                                distinct()
 
 rm( "organism_id_vs_pathway_id_table", 
-      "taxonomy_table", "taxonomy_table_first", "taxonomy_table_second")
+      "taxonomy_table")
 
 ```
 
@@ -233,9 +221,7 @@ cleaned_table <- temp_table %>%
                 mutate( Query_Species = paste(Query_a,  Query_b))  %>%
                 dplyr::select ( -Query_a, -Query_b ) %>%
                 ## Clean up the strain names
-                mutate( Query_Strain = str_replace( Query_Strain,  "03/311/0071", "03-311-0071") %>%
-                                       str_replace_all( "180/2", "180.2") %>%
-                                       str_replace_all( "180/15", "180.15") ) %>%
+                mutate( Query_Strain = str_replace( Query_Strain,  "03/311/0071", "03-311-0071") ) %>%
                 dplyr::select( one_of(c( "Query_Species", "Query_Strain",  column_names)))  
 
 
@@ -463,6 +449,13 @@ write_tsv(refseq_id_to_kegg_pathway_id_table,
                          "refseq_id_to_kegg_pathway_id_table.tsv") )
 ```
 
+```{r}
+my_hits_to_pathways_table_filt %>%
+  distinct( Query_Species, Query_Strain) %>%
+  arrange( Query_Species, Query_Strain)
+
+
+```
 
 
 
