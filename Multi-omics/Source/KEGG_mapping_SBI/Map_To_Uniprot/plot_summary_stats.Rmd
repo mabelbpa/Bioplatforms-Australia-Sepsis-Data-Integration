@@ -30,6 +30,9 @@ source( file.path( base_dir, "Source/Common/common_parameters.R") )
 
 ```
 
+nohup time Rscript --vanilla -e "rmarkdown::render('plot_summary_stats.Rmd', output_file='plot_summary_stats.html') " > plot_summary_stats.log 2>&1 &
+
+
 ## Global parameters
 ```{r}
 best_e_value_to_use <- 10^-3

@@ -28,7 +28,7 @@ The plasmids for each bactrial strain are labelled from p01, p02, etc... ranked 
 
 ### 1.4 Transferring KEGG annoations from similar UniProt sequences to query protein
 
-* [R Notebook script for transferring KEGG annoations of similar UniProt seqeucnes to query protein from the bacterial strains of interest](Multi-omics/Source/KEGG_mapping_SBI/Map_To_Uniprot/parse_blast_sepsis_strain_to_uniprot.Rmd) **Warnings: requires at least 30 GB of RAM to run, otherwise it could hang up the computer.** 
+* [R Notebook script for transferring KEGG annoations of similar UniProt seqeucnes to query protein from the bacterial strains of interest](Multi-omics/Source/KEGG_mapping_SBI/Map_To_Uniprot/parse_blast_sepsis_strain_to_uniprot.Rmd) 
 
 * The output KEGG annoations are in the following file in the ownCloud / Cloudstor shared folder: ownCloud/Sepsis/Multi-omics/Results/KEGG_Annotations/E_value_0.001/Map_to_Uniprot/mapping_uniprot_hits_to_pathways_and_ko.tsv
 

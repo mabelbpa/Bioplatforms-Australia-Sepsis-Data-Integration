@@ -9,10 +9,9 @@
 #PBS -l walltime=01:00:00
 #PBS -j oe
 #PBS -M i.pang@unsw.edu.au
-#PBS -m ae
-
-# Command for running array jobs 
+# Command for running array jobs
 #PBS -J 1-21
+#PBS -m aej
 
 module load blast+/2.9.0
 
