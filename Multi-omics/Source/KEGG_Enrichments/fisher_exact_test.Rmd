@@ -1,0 +1,573 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+## Libraries management 
+```{r}
+if( !require(pacman)) {
+  install.packages("pacman")
+  library(pacman)
+}
+
+p_load(tidyverse)
+p_load(iheatmapr)
+p_load(tidyselect)
+p_load(readxl)
+p_load(magrittr)
+p_load(multidplyr)
+
+# devtools::install_github("tidyverse/multidplyr")
+
+base_dir <- here::here() # "/home/ignatius/PostDoc/2019/Sepsis"
+source( file.path( base_dir, "Source/Common/helper_functions.R") )
+source( file.path( base_dir, "Source/Common/common_parameters.R") )
+
+```
+
+
+nohup time Rscript --vanilla -e "rmarkdown::render('fisher_exact_test.Rmd', output_file='fisher_exact_test.html') " > fisher_exact_test.log 2>&1 &
+
+
+## Global parameter
+```{r}
+cluster <- new_cluster(8)
+cluster_library( cluster, packages = c("tidyverse", "here", "tidyr", "magrittr"))
+
+
+my_fdr_threshold <- 0.05
+```
+
+## Directory Management 
+```{r}
+fisher_exact_test_results_dir <- file.path( owncloud_dir,  
+               "Multi-omics/Results/KEGG_Enrichments/Fishers_Exact_Test" ) 
+
+```
+
+
+## Files Management
+```{r}
+
+kegg_map_title_file <- file.path( owncloud_dir, 
+                                     "Annotations_and_Mapping/KEGG_data_files/pathway/map_title.tab" ) 
+
+kegg_map_title <- vroom::vroom( kegg_map_title_file, 
+                                col_names = c("kegg_pathway_id", 
+                                              "kegg_pathway_name") )
+
+fold_change_table_file <- file.path( owncloud_dir, 
+                                     "Master_Tables/20190807/Multi-omics", 
+                                     "Fold_Changes/multi-omics_master_logFC_fdr_values.tsv" )
+
+
+refseq_id_to_kegg_pathway_id_file <- file.path( owncloud_dir, 
+                         "Annotations_and_Mapping/KEGG_Annotations_Stable_Versions", 
+                         "Version_1/E_value_0.001/refseq_id_to_kegg_pathway_id_table.tsv" )
+
+metabolite_id_to_kegg_pathway_id_file <- file.path( owncloud_dir, 
+            "Master_Tables/20190807/Metabolomics/Fold_Changes/metabolomics_kegg_logFC_FDR_table.tsv" ) 
+
+
+fishers_exact_testing_output_file <- file.path( fisher_exact_test_results_dir, 
+                                                "KEGG_Fisher_Exact_test_E_coli_B36_and_S_aureus_BPH2760.tsv")
+
+fishers_exact_testing_output_rds_file <- file.path( fisher_exact_test_results_dir, 
+                                                    "KEGG_Fisher_Exact_test_E_coli_B36_and_S_aureus_BPH2760.RDS" )
+
+fishers_exact_test_full_output_file <- file.path( fisher_exact_test_results_dir, 
+                                                  "KEGG_Fisher_Exact_test_all_results.tsv")
+
+fishers_exact_test_full_output_rds_file <- file.path( fisher_exact_test_results_dir, 
+                                                      "KEGG_Fisher_Exact_test_all_results.RDS")
+
+```
+
+
+## Read Genome statistics
+I thought I will be a bit more thorough in listing the columns descriptions (more than usual) for this section because it could be hard to understand without these information or opening the Excel file containing the information. 
+```{r}
+
+## The Excel file containing a number of tables with information about the Genomes
+genome_statistics_file <- file.path( data_dir, "Genomes_List/num_seq_per_strain_and_accession.xlsx") 
+
+# table: strain_to_accessions
+# Description: Get information about the Species and Strain name as compared to the Chromosome/Plasmid RefSeq ID
+# Column 1: Species, text, e.g. Streptococcus pyogenes	
+# Column 2: Strain, text, e.g. HKU419
+# Column 3: refseq_ids, text, e.g. NZ_LR595848.1; NZ_LR595849.1	
+#  (The chormosome RefSeq ID. Note that there could be multiple RefSeq ID per line separate by semi-colons and spaces.
+#   Some cleaning is done below to clean this up).
+# Column 4: Species_strain_file_name, e.g. Streptococcus.pyogenes.HKU419.faa	
+# Column 5: List_of_files_to_concat, e.g. NZ_LR595848.1.faa NZ_LR595849.1.faa 
+#           (The list of files to concatenate together, including the files containing the chromosomes and plasmids)
+strain_to_accessions   <- read_xlsx(path=genome_statistics_file, sheet="strain_to_accessions")
+
+# Table: chromosome_id_to_protein_id
+# Description: Get all the Protein RefSeq ID associated with each Chromosome / Plasmid RefSeq ID
+# Column 1: chromosome_refseq_id
+# Column 2: protein_refseq_id
+# Column 3: protein_description
+chromosome_id_to_protein_id <- read_xlsx(path=genome_statistics_file, sheet="chromosome_id_to_protein_id")
+
+# Table: strain_to_accessions_cleaned
+# Description: Convert Species and Strain name to chromosome/plasmid RefSeq ID. 
+#   Clean the refseq_id column using the 'separate_rows' fucntion such that there 
+#   is only one refseq_id per row. 
+# Column 1: Species, text, e.g. Streptococcus pyogenes	
+# Column 2: Strain, text, e.g. HKU419
+# Column 1: chromosome_refseq_id, character, e.g. NZ_LR129840.1
+strain_to_accessions_cleaned <- strain_to_accessions %>%
+                                dplyr::select( Species, Strain, refseq_ids) %>%
+                                separate_rows( refseq_ids, sep = "; ") %>%
+                                dplyr::rename( chromosome_refseq_id = "refseq_ids")
+
+strain_to_protein_id <- strain_to_accessions_cleaned %>%
+  left_join(chromosome_id_to_protein_id, by =c( "chromosome_refseq_id" = "chromosome_refseq_id")) %>%
+  rename( entity_id = "protein_refseq_id")
+
+list_of_strains <- strain_to_protein_id %>%
+                   distinct( Species, Strain)
+
+
+```
+
+## Group map
+# https://dplyr.tidyverse.org/reference/group_map.html
+
+## Import KEGG annotations
+```{r}
+
+refseq_id_to_kegg_pathway_id_table <- vroom::vroom( refseq_id_to_kegg_pathway_id_file )  %>%
+                         rename( Species = "Query_Species",
+                                 Strain = "Query_Strain",
+                                 entity_id = "query_acc.ver") %>%
+                         rename( kegg_pathway_id = "cleaned_kegg_pathway_id") %>%
+                         dplyr::distinct( Species, Strain, kegg_pathway_id, entity_id) %>%
+                         mutate( entity_type= "Protein")
+
+metabolite_id_to_kegg_pathway_id_table_raw <- vroom::vroom( metabolite_id_to_kegg_pathway_id_file)  
+
+metabolite_id_to_kegg_pathway_id_table <-   metabolite_id_to_kegg_pathway_id_table_raw %>%
+  ## Remove loading standards
+  filter( ! ( Type_of_Experiment %in% c( "Metabolomics GC-MS", 
+                                     "Metabolomics LC-MS" )  &
+            str_detect( entity_id, ".*(Istd|ITSD).*" ) ) ) %>%
+  dplyr::distinct( Species, Strain, entity_id, pathway_id) %>%
+  filter( !is.na(pathway_id)) %>%
+  mutate( pathway_id = str_replace ( pathway_id, "^path:ko", "")) %>%
+  rename( kegg_pathway_id = "pathway_id") %>%
+  dplyr::distinct( Species, Strain, kegg_pathway_id, entity_id) %>%
+  mutate( entity_type= "Metabolite")
+            
+entity_id_to_kegg_pathway_id_table <- refseq_id_to_kegg_pathway_id_table %>%
+    bind_rows( metabolite_id_to_kegg_pathway_id_table)
+ 
+```
+
+## Import fold-change master table 
+```{r}
+
+fold_change_table_raw <- vroom::vroom( fold_change_table_file )
+
+fold_change_table <-  fold_change_table_raw %>%
+  mutate( Direction = case_when ( logFC > 0 ~ "Up",
+                                  logFC < 0 ~ "Down",
+                                  TRUE ~ "Unchanged")) %>%
+  ## Remove loading standards
+  filter( ! ( Type_of_Experiment %in% c( "Metabolomics GC-MS", 
+                                     "Metabolomics LC-MS" )  &
+            str_detect( entity_id, ".*(Istd|ITSD).*" ) ) ) %>%
+  mutate( entity_type = case_when ( str_detect( Type_of_Experiment, "Metab") ~ "Metabolite",
+                                    TRUE ~ "Protein"))
+
+fold_change_table %>% distinct( Type_of_Experiment)
+
+```
+
+## Test data: E. coli B36, RNA-Seq, pathway 01100
+```{r}
+
+e_coli_b36_rna_seq_positive <- fold_change_table %>%
+  filter( Species == "Escherichia coli" &
+            Strain == "B36" &
+            Type_of_Experiment == "RNA-Seq" & 
+            FDR < my_fdr_threshold &
+            logFC > 0 )
+
+de_genes <-  e_coli_b36_rna_seq_positive %>% 
+  distinct(entity_id ) %>% 
+  pull(entity_id)
+
+gene_set <- entity_id_to_kegg_pathway_id_table %>%
+    dplyr::filter( Species == "Escherichia coli" &
+             Strain == "B36",
+             kegg_pathway_id == "01100") %>%
+    distinct( entity_id) %>%
+    pull( entity_id)
+
+background_genes <- strain_to_protein_id %>%
+  dplyr::filter( Species == "Escherichia coli" &
+                 Strain == "B36" ) %>%
+  distinct( entity_id ) %>%
+  pull( entity_id)
+
+```
+
+## Format the list of background genes sets for each strain 
+```{r}
+
+list_of_background_genes <- strain_to_protein_id  %>%
+  distinct( Species, Strain,  entity_id) %>%
+  group_by ( Species, Strain  ) %>%
+  nest( background_genes = c( entity_id)) %>%
+  mutate( background_genes = purrr::map( background_genes, ~pull(., entity_id))  ) %>%
+  ungroup( Species, Strain) %>%
+  mutate( entity_type = "Protein")
+
+list_of_background_metabolites <- fold_change_table %>%
+  filter(  Type_of_Experiment %in% c( "Metabolomics GC-MS", 
+                                     "Metabolomics LC-MS" ) ) %>%
+  filter( ! str_detect( entity_id, ".*(Istd|ITSD).*" ) ) %>%
+  distinct( Species, Strain, entity_id)  %>%
+  group_by ( Species, Strain  ) %>%
+  nest( background_genes = c( entity_id)) %>%
+  mutate( background_genes = purrr::map( background_genes, ~pull(., entity_id))  ) %>%
+  ungroup( Species, Strain) %>%
+  mutate( entity_type = "Metabolite")
+
+list_of_background_entities <- list_of_background_genes %>%
+  bind_rows( list_of_background_metabolites )
+
+
+```
+
+## Create a list of gene sets, each element in the list is a list of genes contained in a gene set
+```{r}
+list_of_gene_sets <- entity_id_to_kegg_pathway_id_table %>%
+                      group_by(Species, Strain, entity_type, kegg_pathway_id ) %>%
+                      nest( gene_set = c( entity_id)) %>%
+                      mutate( gene_set = purrr::map( gene_set, ~pull(., entity_id))  ) %>%
+                      ungroup( Species, Strain, entity_type, kegg_pathway_id)
+
+```
+
+## Format the list of DE genes for each strain and each type of comparisons
+```{r}
+
+list_of_de_genes <- fold_change_table %>%
+                    filter ( FDR < my_fdr_threshold ) %>%
+                    distinct(Species, Strain, Type_of_Experiment, Comparisons,  Direction,  entity_type, entity_id ) %>%
+                    group_by(Species, Strain, Type_of_Experiment, Comparisons, Direction,  entity_type ) %>%
+                    nest( de_genes = c( entity_id )) %>%
+                    mutate( de_genes = purrr::map( de_genes, ~pull(., entity_id))  ) %>%
+                    ungroup(Species, Strain, Type_of_Experiment, Comparisons, Direction,  entity_type) %>%
+                    mutate( num_de_genes = purrr::map(de_genes, length  )) %>%
+                    filter( num_de_genes > 1) %>%
+                    dplyr::select(- num_de_genes )
+ 
+```
+
+
+## Fisher's exact test for KEGG pathways and our own annotations
+```{r}
+
+format_contigency_matrix <- function( de_genes, gene_set, background_genes ) {
+  
+  de_genes_copy <- data.frame( genes = de_genes, is_de_genes = "TRUE", stringsAsFactors = FALSE )
+  gene_set_copy <- data.frame( genes = gene_set, is_gene_set = "TRUE", stringsAsFactors = FALSE )
+  background_genes_copy <- data.frame( genes = background_genes, is_background_genes = "TRUE", stringsAsFactors = FALSE )
+  
+  template_counts_table <- data.frame( is_de_genes = c( "TRUE", "TRUE", "FALSE", "FALSE"),
+                                       is_gene_set = c( "TRUE", "FALSE", "TRUE", "FALSE") ) 
+  
+  counts_table <- background_genes_copy %>%
+    left_join( de_genes_copy ) %>%
+    left_join( gene_set_copy) %>%
+    replace_na(  replace=list( is_de_genes = "FALSE", 
+                               is_gene_set = "FALSE" ) ) %>%
+    group_by( is_de_genes, 
+              is_gene_set) %>%
+    summarise( counts = n()) %>%
+    ungroup() %>%
+    mutate( is_de_genes = factor( is_de_genes, levels=c("TRUE", "FALSE")),
+            is_gene_set = factor( is_gene_set, levels=c("TRUE", "FALSE")) ) %>%
+    arrange( is_de_genes, is_gene_set) 
+  
+  counts_table_cleaned <- template_counts_table %>%
+    left_join( counts_table) %>% 
+    replace_na( replace=list(counts = 0 ) )
+  
+  contingency_matrix <- counts_table_cleaned  %>%
+    pivot_wider( names_from = "is_gene_set", values_from="counts", names_prefix = "is_gene_set.") %>%
+    mutate( is_de_genes = paste( "is_de_genes.", is_de_genes, sep="")) %>%
+    column_to_rownames( "is_de_genes")
+  
+  return( contingency_matrix)
+}
+
+
+fishers_exact_test_input_sets_wrapper <- function( de_genes, gene_set, background_genes ) {
+
+  contingency_matrix <- format_contigency_matrix( de_genes, gene_set, background_genes)
+  
+  fisher_test_result <- fisher.test( contingency_matrix, alternative = "greater")
+  
+  return(  fisher_test_result )  
+}
+
+fishers_exact_test_input_matrix_wrapper <- function( contingency_matrix) {
+    
+  fisher_test_result <- fisher.test( contingency_matrix, alternative = "greater")
+  
+  return(  fisher_test_result )  
+}
+
+
+unpivot_contingency_matrix <- function(contingency_matrix) {
+    
+    result_table <- contingency_matrix %>%
+  as.data.frame() %>%
+  rownames_to_column("is_de_genes") %>%
+  pivot_longer( cols=contains("is_gene_set"), names_to = "is_gene_set", values_to="counts"    ) %>%
+  unite( "names", is_de_genes, is_gene_set, sep="|" ) %>%
+  column_to_rownames("names") %>%
+  t() %>%
+  set_rownames(c("x")) %>%
+  as_tibble()
+    
+    return( result_table)
+  }
+
+
+fishers_exact_test_calculations <- function( cluster, fishers_exact_test_data) {
+  
+  cluster_copy(cluster,  "format_contigency_matrix")
+  cluster_copy(cluster,  "fishers_exact_test_input_matrix_wrapper")
+  cluster_copy(cluster,  "unpivot_contingency_matrix")
+  
+  fishers_exact_test_matrix_temp <- fishers_exact_test_data %>%
+    filter ( !is.na( Type_of_Experiment) )  %>%
+    group_by( Species, Strain, Type_of_Experiment, Comparisons, Direction) %>%
+    multidplyr::partition(cluster = cluster) %>%
+    mutate( contingency_matrix = purrr::pmap( list( de_genes=de_genes,
+                                                    gene_set=gene_set, 
+                                                    background_genes=background_genes), format_contigency_matrix)  ) %>%
+    mutate( contingency_vector = purrr::map( contingency_matrix, unpivot_contingency_matrix ) ) %>%
+    collect() %>%
+    unnest( contingency_vector)   %>%
+    ungroup()
+  
+  print ( "Completed step 1.")
+  
+  fishers_exact_test_matrix_temp2 <- fishers_exact_test_matrix_temp %>%
+    group_by( Species, Strain, Type_of_Experiment, Comparisons, Direction) %>%
+    multidplyr::partition(cluster = cluster) %>%
+    mutate( fisher_extact_test  = purrr::map( contingency_matrix,  fishers_exact_test_input_matrix_wrapper )) %>%
+    collect() %>%
+    ungroup()
+  
+  print ( "Completed step 2.")
+
+  
+  fishers_exact_test_matrix <- fishers_exact_test_matrix_temp2 %>%
+    ## If the `is_de_genes.TRUE|is_gene_set.TRUE` <=1, we do not think they 
+    ## are enriched by definition, so remove these early on.
+    ## I use a flag so as to keep them for auditing / checking purposes.
+    mutate( is_included = case_when ( `is_de_genes.TRUE|is_gene_set.TRUE` > 1 ~ TRUE,
+                                      TRUE ~ FALSE ) ) %>%
+    group_by( Species, Strain, Type_of_Experiment, Comparisons, Direction, is_included ) %>%
+    mutate( p_value_raw = purrr::map_dbl( fisher_extact_test, ~.x$p.value),
+            odds_ratio =  purrr::map_dbl( fisher_extact_test, ~.x$estimate) ) %>%
+    nest( ) %>%
+    mutate( data = purrr::map( data, function(x){ x %>% mutate(  FDR = p.adjust( p_value_raw)  ) } ) ) %>%
+    unnest( cols=data ) %>%
+    mutate( FDR = case_when( is_included == TRUE ~ FDR,
+                             TRUE ~ NA_real_ )   ) %>%
+    ungroup() %>%
+    mutate( de_gene_with_annotation_list = purrr::map2(  de_genes, gene_set, ~intersect(.x, .y)   ) )  %>%
+    mutate( de_gene_with_annotation_list = purrr::map_chr( de_gene_with_annotation_list, ~paste(., collapse=", " )))
+
+    print ( "Completed step 3.")
+  
+  
+  return(fishers_exact_test_matrix )
+}
+
+```
+
+```{r}
+
+
+
+format_contigency_matrix( de_genes, gene_set, background_genes ) 
+
+```
+
+## Combine all of the necessary tables together 
+```{r}
+
+fishers_exact_test_data <- list_of_background_entities %>%
+  left_join( list_of_de_genes, by = c("Species", "Strain", "entity_type") ) %>%
+  left_join( list_of_gene_sets, by = c("Species", "Strain", "entity_type")) %>%
+  dplyr::select( Species, Strain,
+                 Type_of_Experiment,
+                 Comparisons, 
+                 Direction,
+                 kegg_pathway_id,
+                 de_genes, 
+                 gene_set, 
+                 background_genes) %>%
+  filter ( !is.na( Type_of_Experiment) ) 
+
+
+fishers_exact_test_data_test <- fishers_exact_test_data %>%
+  filter( (Species == "Escherichia coli" & Strain == "B36")  |
+          (Species == "Staphylococcus aureus" & Strain == "BPH2760")  ) 
+
+```
+
+
+
+```{r}
+
+fishers_exact_test_matrix_test <- fishers_exact_test_calculations( cluster, fishers_exact_test_data_test)
+
+saveRDS(fishers_exact_test_matrix_test, file=fishers_exact_testing_output_rds_file   )
+
+fishers_exact_test_matrix_test_cleaned <- fishers_exact_test_matrix_test %>%
+        left_join( kegg_map_title, by = "kegg_pathway_id" ) %>%
+       dplyr::select( 'Species', 'Strain', 'Type_of_Experiment', 
+                      'Comparisons', 'Direction',  
+                      'kegg_pathway_name', 'kegg_pathway_id',
+                      'p_value_raw', 'odds_ratio', 'FDR',
+                      'is_de_genes.TRUE|is_gene_set.TRUE', 
+                      'is_de_genes.TRUE|is_gene_set.FALSE', 
+                      'is_de_genes.FALSE|is_gene_set.TRUE', 
+                      'is_de_genes.FALSE|is_gene_set.FALSE', 
+                      'de_gene_with_annotation_list')
+
+write_tsv( fishers_exact_test_matrix_test_cleaned, 
+           path=fishers_exact_testing_output_file)
+
+```
+
+
+```{r}
+fishers_exact_test_data
+```
+
+
+```{r}
+fishers_exact_test_matrix <- fishers_exact_test_calculations( cluster, fishers_exact_test_data)
+
+saveRDS(fishers_exact_test_matrix, file=fishers_exact_test_full_output_rds_file   )
+
+
+fishers_exact_test_matrix_cleaned <- fishers_exact_test_matrix %>%
+        left_join( kegg_map_title, by = "kegg_pathway_id" ) %>%
+       dplyr::select( 'Species', 'Strain', 'Type_of_Experiment', 
+                      'Comparisons', 'Direction',  
+                      'kegg_pathway_name', 'kegg_pathway_id',
+                      'p_value_raw', 'odds_ratio', 'FDR',
+                      'is_de_genes.TRUE|is_gene_set.TRUE', 
+                      'is_de_genes.TRUE|is_gene_set.FALSE', 
+                      'is_de_genes.FALSE|is_gene_set.TRUE', 
+                      'is_de_genes.FALSE|is_gene_set.FALSE', 
+                      'de_gene_with_annotation_list')
+
+write_tsv( fishers_exact_test_matrix_cleaned, 
+           path=fishers_exact_test_full_output_file)
+```
+
+## Read in the results file 
+```{r}
+fishers_exact_test_matrix_cleaned <- vroom::vroom( fishers_exact_test_full_output_file)
+
+# de_gene_with_annotation_list
+```
+
+## Deal with additional gene IDs 
+```{r}
+
+# This gives the gene symbols
+genes_list <- vroom::vroom( file.path( owncloud_dir, 
+       "Master_Tables/20190807/Transcriptomics/Fold_Changes/genes_list.tsv" ) ) 
+
+genes_list %>%
+  filter( pseudo == FALSE ) %>%
+  dplyr::select( Species, Strain, gene_name, protein_id)
+
+# This gives the KEGG ortholog group for proteins
+uniprot_list <- vroom::vroom( file.path( owncloud_dir, 
+ "Annotations_and_Mapping/KEGG_Annotations_Stable_Versions/Version_1/E_value_0.001/mapping_uniprot_hits_to_pathways_and_ko.tsv" ))
+
+uniprot_list %>% 
+  dplyr::select(Query_Species, Query_Strain, query_acc.ver, kegg_ko_id  ) %>%
+  dplyr::rename( Species = "Query_Species",
+                 Strain = "Query_Strain",
+                 protein_id = "query_acc.ver") %>%
+  dplyr::mutate( kegg_ko_id = str_replace( kegg_ko_id, "^ko:", ""))
+
+# HMDB and KEGG IDs
+metabolites_list <- readxl::read_xlsx( file.path( owncloud_dir, 
+ "Metabolomics/metabolite_keys_table.xlsx"))
+
+
+
+
+
+
+
+```
+
+
+
+# Checking the results
+
+## Check that we have data for all the strains 
+```{r}
+fishers_exact_test_matrix_cleaned %>% 
+  distinct(Species, Strain, Type_of_Experiment) %>% 
+  group_by(Type_of_Experiment) %>% 
+  count
+  
+fishers_exact_test_matrix_cleaned %>% 
+  distinct(Species, Strain, Type_of_Experiment) %>%
+  mutate( has_data = 1) %>%
+  pivot_wider( names_from = "Type_of_Experiment", values_from ="has_data" )
+```
+
+
+
+## Check that we have 283 KEGG pathways in the results
+```{r}
+kegg_pathways_for_proteins <-  refseq_id_to_kegg_pathway_id_table  %>% dplyr::distinct(kegg_pathway_id) %>% arrange (kegg_pathway_id)
+kegg_pathways_for_metabolites <- metabolite_id_to_kegg_pathway_id_table   %>% dplyr::distinct(kegg_pathway_id) %>% arrange (kegg_pathway_id) 
+
+kegg_pathways_for_proteins %>% bind_rows(kegg_pathways_for_metabolites) %>% distinct %>% count
+
+fishers_exact_test_matrix_cleaned %>% dplyr::distinct(kegg_pathway_id) %>% arrange (kegg_pathway_id)  %>% count
+
+
+```
+
+
+```{r}
+proteomics_ms1 <- vroom::vroom( "/home/ignatius/ownCloud/Sepsis/Proteomics-MS1/MPMF Fold change table v2.csv" ) 
+
+head( proteomics_ms1)
+
+
+proteomics_ms1 %>% distinct( Organism, `Strain Name`)
+```
+
+
+```{r}
+proteomics_swath1 <- vroom::vroom( "/home/ignatius/ownCloud/Sepsis/Proteomics-SWATH/Igy APAF Fold change table v1.csv" ) 
+
+proteomics_swath1 %>% distinct( `Organism Name`, `Strain Name`)
+
+
+```
+
