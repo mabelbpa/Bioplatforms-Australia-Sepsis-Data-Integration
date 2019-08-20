@@ -33,15 +33,18 @@ nohup time Rscript --vanilla -e "rmarkdown::render('fisher_exact_test.Rmd', outp
 ```{r}
 cluster <- new_cluster(8)
 cluster_library( cluster, packages = c("tidyverse", "here", "tidyr", "magrittr"))
-
-
 my_fdr_threshold <- 0.05
+
+results_version <- "Development"
 ```
 
 ## Directory Management 
 ```{r}
 fisher_exact_test_results_dir <- file.path( owncloud_dir,  
-               "Multi-omics/Results/KEGG_Enrichments/Fishers_Exact_Test" ) 
+               "Multi-omics/Results/KEGG_Enrichments/Fishers_Exact_Test",
+               ) 
+
+create_dir_if_not_exists(fisher_exact_test_results_dir)
 
 ```
 
