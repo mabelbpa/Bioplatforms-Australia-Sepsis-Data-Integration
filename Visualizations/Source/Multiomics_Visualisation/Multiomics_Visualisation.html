@@ -13150,7 +13150,7 @@ pandas</code></pre>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[42]:</div>
+<div class="prompt input_prompt">In&nbsp;[1]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># The raw code for this IPython notebook is by default hidden for easier reading.</span>
@@ -13182,7 +13182,7 @@ pandas</code></pre>
 
 <div class="output_area">
 
-    <div class="prompt output_prompt">Out[42]:</div>
+    <div class="prompt output_prompt">Out[1]:</div>
 
 
 
@@ -13219,7 +13219,7 @@ To toggle on/off the raw code, click <a href="javascript:code_toggle()">here</a>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[17]:</div>
+<div class="prompt input_prompt">In&nbsp;[2]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span>
@@ -13253,7 +13253,7 @@ To toggle on/off the raw code, click <a href="javascript:code_toggle()">here</a>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[19]:</div>
+<div class="prompt input_prompt">In&nbsp;[3]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">infile_path</span> <span class="o">=</span> <span class="s2">&quot;KEGG_Fisher_Exact_test_all_results.tsv&quot;</span>
@@ -13271,7 +13271,7 @@ To toggle on/off the raw code, click <a href="javascript:code_toggle()">here</a>
 
 <div class="output_area">
 
-    <div class="prompt output_prompt">Out[19]:</div>
+    <div class="prompt output_prompt">Out[3]:</div>
 
 
 
@@ -13423,7 +13423,7 @@ To toggle on/off the raw code, click <a href="javascript:code_toggle()">here</a>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[21]:</div>
+<div class="prompt input_prompt">In&nbsp;[4]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;Data dimensions: &quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)]))</span>
@@ -13466,7 +13466,7 @@ Quantity of KEGG pathways: 283
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[27]:</div>
+<div class="prompt input_prompt">In&nbsp;[5]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># load data</span>
@@ -13529,7 +13529,7 @@ Strains removed by FDR 0.05 filter: {&#39;Escherichia coli MS14387&#39;}
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[25]:</div>
+<div class="prompt input_prompt">In&nbsp;[6]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># some helper functions are defined here to automate repetitive tasks</span>
@@ -13616,6 +13616,104 @@ Strains removed by FDR 0.05 filter: {&#39;Escherichia coli MS14387&#39;}
 </div>
 </div>
 </div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[7]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># collapse across GC-MS and LC-MS</span>
+<span class="n">subset</span> <span class="o">=</span> <span class="n">intermediate_data</span>
+<span class="n">omics_kegg</span> <span class="o">=</span> <span class="n">subset</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span> <span class="p">:</span> <span class="p">,</span> <span class="p">[</span><span class="s1">&#39;Species_Strain&#39;</span><span class="p">,</span> <span class="s1">&#39;Species_Strain_Type_of_Experiment&#39;</span><span class="p">,</span> <span class="s1">&#39;kegg_pathway_name&#39;</span><span class="p">,</span> <span class="s1">&#39;Species&#39;</span><span class="p">,</span> <span class="s1">&#39;Strain&#39;</span><span class="p">,</span> <span class="s1">&#39;Type_of_Experiment&#39;</span><span class="p">,</span> <span class="s1">&#39;Direction&#39;</span><span class="p">,</span> <span class="s1">&#39;Type_of_Experiment_Direction&#39;</span><span class="p">]</span> <span class="p">]</span>
+<span class="n">omics_kegg</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">before</span> <span class="o">=</span> <span class="n">omics_kegg</span><span class="o">.</span><span class="n">shape</span>
+
+<span class="c1"># metabolomics block, also split into subsets based on regulation state (up or down)</span>
+<span class="n">metabolomics</span> <span class="o">=</span> <span class="n">omics_kegg</span><span class="p">[</span><span class="n">omics_kegg</span><span class="o">.</span><span class="n">Type_of_Experiment</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Metabolomics&quot;</span><span class="p">)]</span>
+<span class="n">metabolomics</span><span class="p">[</span><span class="s2">&quot;Type_of_Experiment&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Metabolomics&quot;</span>
+<span class="n">metabolomics</span><span class="p">[</span><span class="s2">&quot;Type_of_Experiment_Direction&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">metabolomics</span><span class="p">[</span><span class="s2">&quot;Type_of_Experiment&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span> <span class="o">+</span> <span class="n">metabolomics</span><span class="p">[</span><span class="s2">&quot;Direction&quot;</span><span class="p">]</span>
+<span class="n">metabolomics_up</span> <span class="o">=</span> <span class="n">metabolomics</span><span class="p">[</span><span class="n">metabolomics</span><span class="p">[</span><span class="s2">&quot;Direction&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Down&quot;</span><span class="p">]</span>
+<span class="n">metabolomics_dn</span> <span class="o">=</span> <span class="n">metabolomics</span><span class="p">[</span><span class="n">metabolomics</span><span class="p">[</span><span class="s2">&quot;Direction&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Up&quot;</span><span class="p">]</span>
+<span class="k">assert</span> <span class="p">(</span><span class="n">metabolomics</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="p">(</span><span class="n">metabolomics_up</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">metabolomics_dn</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="s2">&quot;Total pathways surveyed should be the same&quot;</span>
+
+<span class="c1"># proteomics block, also split into subsets based on regulation state (up or down)</span>
+<span class="n">proteomics</span> <span class="o">=</span> <span class="n">omics_kegg</span><span class="p">[</span><span class="n">omics_kegg</span><span class="o">.</span><span class="n">Type_of_Experiment</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Proteomics&quot;</span><span class="p">)]</span>
+<span class="n">proteomics</span><span class="p">[</span><span class="s2">&quot;Type_of_Experiment&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Proteomics&quot;</span>
+<span class="n">proteomics</span><span class="p">[</span><span class="s2">&quot;Type_of_Experiment_Direction&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">proteomics</span><span class="p">[</span><span class="s2">&quot;Type_of_Experiment&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span> <span class="o">+</span> <span class="n">proteomics</span><span class="p">[</span><span class="s2">&quot;Direction&quot;</span><span class="p">]</span>
+<span class="n">proteomics_up</span> <span class="o">=</span> <span class="n">proteomics</span><span class="p">[</span><span class="n">proteomics</span><span class="p">[</span><span class="s2">&quot;Direction&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Down&quot;</span><span class="p">]</span>
+<span class="n">proteomics_dn</span> <span class="o">=</span> <span class="n">proteomics</span><span class="p">[</span><span class="n">proteomics</span><span class="p">[</span><span class="s2">&quot;Direction&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Up&quot;</span><span class="p">]</span>
+<span class="k">assert</span> <span class="p">(</span><span class="n">proteomics</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="p">(</span><span class="n">proteomics_up</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">proteomics_dn</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="s2">&quot;Total pathways surveyed should be the same&quot;</span>
+
+<span class="c1"># rnaseq block, also split into subsets based on regulation state (up or down)</span>
+<span class="n">rna_seq</span> <span class="o">=</span> <span class="n">omics_kegg</span><span class="p">[</span><span class="n">omics_kegg</span><span class="o">.</span><span class="n">Type_of_Experiment</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;RNA-Seq&quot;</span><span class="p">)]</span>
+<span class="n">rna_seq</span><span class="p">[</span><span class="s2">&quot;Type_of_Experiment&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;RNA-Seq&quot;</span>
+<span class="n">rna_seq</span><span class="p">[</span><span class="s2">&quot;Type_of_Experiment_Direction&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rna_seq</span><span class="p">[</span><span class="s2">&quot;Type_of_Experiment&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span> <span class="o">+</span> <span class="n">rna_seq</span><span class="p">[</span><span class="s2">&quot;Direction&quot;</span><span class="p">]</span>
+<span class="n">rna_seq_up</span> <span class="o">=</span> <span class="n">rna_seq</span><span class="p">[</span><span class="n">rna_seq</span><span class="p">[</span><span class="s2">&quot;Direction&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Down&quot;</span><span class="p">]</span>
+<span class="n">rna_seq_dn</span> <span class="o">=</span> <span class="n">rna_seq</span><span class="p">[</span><span class="n">rna_seq</span><span class="p">[</span><span class="s2">&quot;Direction&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Up&quot;</span><span class="p">]</span>
+<span class="k">assert</span> <span class="p">(</span><span class="n">rna_seq</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="p">(</span><span class="n">rna_seq_up</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">rna_seq_dn</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="s2">&quot;Total pathways surveyed should be the same&quot;</span>
+
+<span class="n">omics_kegg</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">rna_seq</span><span class="p">,</span> <span class="n">metabolomics</span><span class="p">,</span> <span class="n">proteomics</span><span class="p">],</span> <span class="n">verify_integrity</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">omics_kegg_direction</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">rna_seq_up</span><span class="p">,</span> <span class="n">rna_seq_dn</span><span class="p">,</span> <span class="n">metabolomics_up</span><span class="p">,</span> <span class="n">metabolomics_dn</span><span class="p">,</span> <span class="n">proteomics_up</span><span class="p">,</span> <span class="n">proteomics_dn</span><span class="p">],</span> <span class="n">verify_integrity</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="k">assert</span> <span class="n">before</span> <span class="o">==</span> <span class="n">omics_kegg</span><span class="o">.</span><span class="n">shape</span>
+<span class="k">assert</span> <span class="n">before</span> <span class="o">==</span> <span class="n">omics_kegg_direction</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="s2">&quot;Original and recombined data must have identical dimensions!&quot;</span>
+<span class="n">omics_kegg</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">omics_kegg_direction</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>/Users/tche0054/miniconda3/envs/graph/lib/python3.7/site-packages/ipykernel_launcher.py:9: SettingWithCopyWarning: 
+A value is trying to be set on a copy of a slice from a DataFrame.
+Try using .loc[row_indexer,col_indexer] = value instead
+
+See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
+  if __name__ == &#39;__main__&#39;:
+/Users/tche0054/miniconda3/envs/graph/lib/python3.7/site-packages/ipykernel_launcher.py:10: SettingWithCopyWarning: 
+A value is trying to be set on a copy of a slice from a DataFrame.
+Try using .loc[row_indexer,col_indexer] = value instead
+
+See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
+  # Remove the CWD from sys.path while we load stuff.
+/Users/tche0054/miniconda3/envs/graph/lib/python3.7/site-packages/ipykernel_launcher.py:17: SettingWithCopyWarning: 
+A value is trying to be set on a copy of a slice from a DataFrame.
+Try using .loc[row_indexer,col_indexer] = value instead
+
+See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
+/Users/tche0054/miniconda3/envs/graph/lib/python3.7/site-packages/ipykernel_launcher.py:18: SettingWithCopyWarning: 
+A value is trying to be set on a copy of a slice from a DataFrame.
+Try using .loc[row_indexer,col_indexer] = value instead
+
+See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
+/Users/tche0054/miniconda3/envs/graph/lib/python3.7/site-packages/ipykernel_launcher.py:25: SettingWithCopyWarning: 
+A value is trying to be set on a copy of a slice from a DataFrame.
+Try using .loc[row_indexer,col_indexer] = value instead
+
+See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
+/Users/tche0054/miniconda3/envs/graph/lib/python3.7/site-packages/ipykernel_launcher.py:26: SettingWithCopyWarning: 
+A value is trying to be set on a copy of a slice from a DataFrame.
+Try using .loc[row_indexer,col_indexer] = value instead
+
+See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
@@ -13626,7 +13724,7 @@ Strains removed by FDR 0.05 filter: {&#39;Escherichia coli MS14387&#39;}
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[28]:</div>
+<div class="prompt input_prompt">In&nbsp;[8]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">make_upsetplot</span><span class="p">(</span><span class="n">reformat_data_for_upsetplot</span><span class="p">(</span><span class="n">omics_kegg_direction</span><span class="p">,</span> <span class="s2">&quot;Type_of_Experiment_Direction&quot;</span><span class="p">))</span>
@@ -13655,94 +13753,94 @@ RNA-Seq Up as one plot
 
 Strains dropped from Metabolomics Down data as they had no KEGG pathway overlap:
                                      0
-0            Escherichia coli MS14386
-1         Klebsiella pneumoniae AJ218
-2       Staphylococcus aureus BPH2986
-3        Streptococcus pneumoniae 947
-4       Streptococcus pyogenes HKU419
-5       Staphylococcus aureus BPH2947
-6          Klebsiella pneumoniae KPC2
-7       Staphylococcus aureus BPH2900
-8       Staphylococcus aureus BPH2819
-9          Klebsiella variicola AJ292
-10      Streptococcus pneumoniae 4496
-11      Staphylococcus aureus BPH2760
-12               Escherichia coli B36
-13        Streptococcus pyogenes 5448
-14       Streptococcus pyogenes PS003
-15       Streptococcus pyogenes SP444
-16    Streptococcus pneumoniae 180/15
-17     Streptococcus pneumoniae 180/2
-18  Klebsiella variicola 04153260899A
+0          Klebsiella variicola AJ292
+1     Streptococcus pneumoniae 180/15
+2      Streptococcus pneumoniae 180/2
+3        Streptococcus pyogenes PS003
+4       Streptococcus pneumoniae 4496
+5         Streptococcus pyogenes 5448
+6   Klebsiella variicola 04153260899A
+7       Staphylococcus aureus BPH2947
+8                Escherichia coli B36
+9       Staphylococcus aureus BPH2986
+10      Staphylococcus aureus BPH2900
+11       Streptococcus pneumoniae 947
+12         Klebsiella pneumoniae KPC2
+13       Streptococcus pyogenes SP444
+14        Klebsiella pneumoniae AJ218
+15      Streptococcus pyogenes HKU419
+16      Staphylococcus aureus BPH2760
+17           Escherichia coli MS14386
+18      Staphylococcus aureus BPH2819
 
 Strains dropped from Metabolomics Up data as they had no KEGG pathway overlap:
                                     0
-0        Klebsiella pneumoniae AJ218
-1   Klebsiella variicola 03-311-0071
-2      Streptococcus pneumoniae 4496
-3      Staphylococcus aureus BPH2760
-4       Streptococcus pneumoniae 947
-5               Escherichia coli B36
-6       Streptococcus pyogenes PS003
+0         Klebsiella variicola AJ292
+1    Streptococcus pneumoniae 180/15
+2         Klebsiella pneumoniae KPC2
+3     Streptococcus pneumoniae 180/2
+4       Streptococcus pyogenes PS003
+5        Klebsiella pneumoniae AJ218
+6      Streptococcus pneumoniae 4496
 7       Streptococcus pyogenes PS006
 8         Klebsiella variicola AJ055
-9    Streptococcus pneumoniae 180/15
-10        Klebsiella pneumoniae KPC2
-11    Streptococcus pneumoniae 180/2
-12     Staphylococcus aureus BPH2900
-13     Staphylococcus aureus BPH2819
-14        Klebsiella variicola AJ292
+9      Staphylococcus aureus BPH2760
+10              Escherichia coli B36
+11     Staphylococcus aureus BPH2900
+12     Staphylococcus aureus BPH2819
+13  Klebsiella variicola 03-311-0071
+14      Streptococcus pneumoniae 947
 
 Strains dropped from Proteomics Down data as they had no KEGG pathway overlap:
                                    0
-0          Escherichia coli MS14386
-1     Streptococcus pneumoniae 4496
-2     Streptococcus pyogenes HKU419
-3      Streptococcus pneumoniae 947
-4          Escherichia coli MS14385
-5              Escherichia coli B36
-6       Streptococcus pyogenes 5448
-7      Streptococcus pyogenes PS003
-8      Streptococcus pyogenes SP444
-9          Escherichia coli MS14384
-10  Streptococcus pneumoniae 180/15
-11   Streptococcus pneumoniae 180/2
-12     Streptococcus pyogenes PS006
+0   Streptococcus pneumoniae 180/15
+1          Escherichia coli MS14385
+2      Streptococcus pyogenes SP444
+3    Streptococcus pneumoniae 180/2
+4      Streptococcus pyogenes PS003
+5     Streptococcus pyogenes HKU419
+6     Streptococcus pneumoniae 4496
+7       Streptococcus pyogenes 5448
+8      Streptococcus pyogenes PS006
+9              Escherichia coli B36
+10         Escherichia coli MS14384
+11         Escherichia coli MS14386
+12     Streptococcus pneumoniae 947
 
 Strains dropped from Proteomics Up data as they had no KEGG pathway overlap:
                                    0
-0          Escherichia coli MS14386
-1     Streptococcus pneumoniae 4496
-2     Streptococcus pyogenes HKU419
-3      Streptococcus pneumoniae 947
-4          Escherichia coli MS14385
-5              Escherichia coli B36
-6       Streptococcus pyogenes 5448
-7      Streptococcus pyogenes PS003
-8      Streptococcus pyogenes SP444
-9          Escherichia coli MS14384
-10  Streptococcus pneumoniae 180/15
-11   Streptococcus pneumoniae 180/2
-12     Streptococcus pyogenes PS006
+0   Streptococcus pneumoniae 180/15
+1          Escherichia coli MS14385
+2      Streptococcus pyogenes SP444
+3    Streptococcus pneumoniae 180/2
+4      Streptococcus pyogenes PS003
+5     Streptococcus pyogenes HKU419
+6     Streptococcus pneumoniae 4496
+7       Streptococcus pyogenes 5448
+8      Streptococcus pyogenes PS006
+9              Escherichia coli B36
+10         Escherichia coli MS14384
+11         Escherichia coli MS14386
+12     Streptococcus pneumoniae 947
 
 Strains dropped from RNA-Seq Down data as they had no KEGG pathway overlap:
                                     0
-0        Klebsiella pneumoniae AJ218
-1      Streptococcus pyogenes HKU419
-2        Streptococcus pyogenes 5448
-3           Escherichia coli MS14385
-4         Klebsiella variicola AJ055
-5       Streptococcus pyogenes SP444
+0           Escherichia coli MS14385
+1       Streptococcus pyogenes SP444
+2        Klebsiella pneumoniae AJ218
+3      Streptococcus pyogenes HKU419
+4        Streptococcus pyogenes 5448
+5         Klebsiella variicola AJ055
 6  Klebsiella variicola 04153260899A
 
 Strains dropped from RNA-Seq Up data as they had no KEGG pathway overlap:
                                 0
-0  Staphylococcus aureus BPH2986
+0   Streptococcus pyogenes SP444
 1  Streptococcus pyogenes HKU419
-2    Streptococcus pyogenes 5448
-3   Streptococcus pyogenes PS006
-4   Streptococcus pyogenes SP444
-5  Staphylococcus aureus BPH2900
+2   Streptococcus pyogenes PS006
+3    Streptococcus pyogenes 5448
+4  Staphylococcus aureus BPH2900
+5  Staphylococcus aureus BPH2986
 </pre>
 </div>
 </div>
@@ -13844,6 +13942,752 @@ Strains dropped from RNA-Seq Up data as they had no KEGG pathway overlap:
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
+<p>For S. aureus, we need to list the pathways found to be enriched in the most number of strains. This will be performed for each type of experiment (omics) as above, and for each regulation state (pathways upregulated and pathways downregulated). We focus on S aureus because we have all the strains and omics data. Its top pathways will be extracted and presented in a few different ways.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[9]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># percentile (ie top 10% of intersections)?</span>
+<span class="c1"># top intersections only?</span>
+<span class="c1"># some seem to be species specific</span>
+<span class="n">omics_kegg_direction</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt output_prompt">Out[9]:</div>
+
+
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Direction</th>
+      <th>Species</th>
+      <th>Species_Strain</th>
+      <th>Species_Strain_Type_of_Experiment</th>
+      <th>Strain</th>
+      <th>Type_of_Experiment</th>
+      <th>Type_of_Experiment_Direction</th>
+      <th>kegg_pathway_name</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 4496</td>
+      <td>Streptococcus pneumoniae 4496 RNA-Seq</td>
+      <td>4496</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Metabolic pathways</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 4496</td>
+      <td>Streptococcus pneumoniae 4496 RNA-Seq</td>
+      <td>4496</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Biosynthesis of secondary metabolites</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 4496</td>
+      <td>Streptococcus pneumoniae 4496 RNA-Seq</td>
+      <td>4496</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Biosynthesis of antibiotics</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 4496</td>
+      <td>Streptococcus pneumoniae 4496 RNA-Seq</td>
+      <td>4496</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Galactose metabolism</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 4496</td>
+      <td>Streptococcus pneumoniae 4496 RNA-Seq</td>
+      <td>4496</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Pyruvate metabolism</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 4496</td>
+      <td>Streptococcus pneumoniae 4496 RNA-Seq</td>
+      <td>4496</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Phenylalanine, tyrosine and tryptophan biosynt...</td>
+    </tr>
+    <tr>
+      <th>103</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 4496</td>
+      <td>Streptococcus pneumoniae 4496 RNA-Seq</td>
+      <td>4496</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Fatty acid biosynthesis</td>
+    </tr>
+    <tr>
+      <th>105</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 4496</td>
+      <td>Streptococcus pneumoniae 4496 RNA-Seq</td>
+      <td>4496</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Fatty acid metabolism</td>
+    </tr>
+    <tr>
+      <th>173</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 947</td>
+      <td>Streptococcus pneumoniae 947 RNA-Seq</td>
+      <td>947</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Cationic antimicrobial peptide (CAMP) resistance</td>
+    </tr>
+    <tr>
+      <th>208</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 947</td>
+      <td>Streptococcus pneumoniae 947 RNA-Seq</td>
+      <td>947</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Biofilm formation - Vibrio cholerae</td>
+    </tr>
+    <tr>
+      <th>213</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 947</td>
+      <td>Streptococcus pneumoniae 947 RNA-Seq</td>
+      <td>947</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Valine, leucine and isoleucine degradation</td>
+    </tr>
+    <tr>
+      <th>216</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 947</td>
+      <td>Streptococcus pneumoniae 947 RNA-Seq</td>
+      <td>947</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Pyruvate metabolism</td>
+    </tr>
+    <tr>
+      <th>238</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 947</td>
+      <td>Streptococcus pneumoniae 947 RNA-Seq</td>
+      <td>947</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Fatty acid biosynthesis</td>
+    </tr>
+    <tr>
+      <th>240</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 947</td>
+      <td>Streptococcus pneumoniae 947 RNA-Seq</td>
+      <td>947</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Fatty acid metabolism</td>
+    </tr>
+    <tr>
+      <th>331</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 180/2</td>
+      <td>Streptococcus pneumoniae 180/2 RNA-Seq</td>
+      <td>180/2</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Metabolic pathways</td>
+    </tr>
+    <tr>
+      <th>333</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 180/2</td>
+      <td>Streptococcus pneumoniae 180/2 RNA-Seq</td>
+      <td>180/2</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Biosynthesis of secondary metabolites</td>
+    </tr>
+    <tr>
+      <th>334</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 180/2</td>
+      <td>Streptococcus pneumoniae 180/2 RNA-Seq</td>
+      <td>180/2</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Biosynthesis of amino acids</td>
+    </tr>
+    <tr>
+      <th>341</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 180/2</td>
+      <td>Streptococcus pneumoniae 180/2 RNA-Seq</td>
+      <td>180/2</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Microbial metabolism in diverse environments</td>
+    </tr>
+    <tr>
+      <th>342</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 180/2</td>
+      <td>Streptococcus pneumoniae 180/2 RNA-Seq</td>
+      <td>180/2</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Biosynthesis of antibiotics</td>
+    </tr>
+    <tr>
+      <th>350</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 180/2</td>
+      <td>Streptococcus pneumoniae 180/2 RNA-Seq</td>
+      <td>180/2</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Starch and sucrose metabolism</td>
+    </tr>
+    <tr>
+      <th>351</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 180/2</td>
+      <td>Streptococcus pneumoniae 180/2 RNA-Seq</td>
+      <td>180/2</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Amino sugar and nucleotide sugar metabolism</td>
+    </tr>
+    <tr>
+      <th>352</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 180/2</td>
+      <td>Streptococcus pneumoniae 180/2 RNA-Seq</td>
+      <td>180/2</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Fructose and mannose metabolism</td>
+    </tr>
+    <tr>
+      <th>353</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 180/2</td>
+      <td>Streptococcus pneumoniae 180/2 RNA-Seq</td>
+      <td>180/2</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Phosphotransferase system (PTS)</td>
+    </tr>
+    <tr>
+      <th>354</th>
+      <td>Down</td>
+      <td>Streptococcus pneumoniae</td>
+      <td>Streptococcus pneumoniae 180/2</td>
+      <td>Streptococcus pneumoniae 180/2 RNA-Seq</td>
+      <td>180/2</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Galactose metabolism</td>
+    </tr>
+    <tr>
+      <th>668</th>
+      <td>Down</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2986</td>
+      <td>Staphylococcus aureus BPH2986 RNA-Seq</td>
+      <td>BPH2986</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Metabolic pathways</td>
+    </tr>
+    <tr>
+      <th>670</th>
+      <td>Down</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2986</td>
+      <td>Staphylococcus aureus BPH2986 RNA-Seq</td>
+      <td>BPH2986</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Biosynthesis of secondary metabolites</td>
+    </tr>
+    <tr>
+      <th>674</th>
+      <td>Down</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2986</td>
+      <td>Staphylococcus aureus BPH2986 RNA-Seq</td>
+      <td>BPH2986</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Microbial metabolism in diverse environments</td>
+    </tr>
+    <tr>
+      <th>680</th>
+      <td>Down</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2986</td>
+      <td>Staphylococcus aureus BPH2986 RNA-Seq</td>
+      <td>BPH2986</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Glyoxylate and dicarboxylate metabolism</td>
+    </tr>
+    <tr>
+      <th>681</th>
+      <td>Down</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2986</td>
+      <td>Staphylococcus aureus BPH2986 RNA-Seq</td>
+      <td>BPH2986</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Biosynthesis of antibiotics</td>
+    </tr>
+    <tr>
+      <th>682</th>
+      <td>Down</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2986</td>
+      <td>Staphylococcus aureus BPH2986 RNA-Seq</td>
+      <td>BPH2986</td>
+      <td>RNA-Seq</td>
+      <td>RNA-Seq Down</td>
+      <td>Carbon metabolism</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>20865</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2819</td>
+      <td>Staphylococcus aureus BPH2819 Proteomics MS1 DDA</td>
+      <td>BPH2819</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Carbon metabolism</td>
+    </tr>
+    <tr>
+      <th>20897</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2819</td>
+      <td>Staphylococcus aureus BPH2819 Proteomics MS1 DDA</td>
+      <td>BPH2819</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Glycolysis / Gluconeogenesis</td>
+    </tr>
+    <tr>
+      <th>20905</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2819</td>
+      <td>Staphylococcus aureus BPH2819 Proteomics MS1 DDA</td>
+      <td>BPH2819</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Fructose and mannose metabolism</td>
+    </tr>
+    <tr>
+      <th>20914</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2819</td>
+      <td>Staphylococcus aureus BPH2819 Proteomics MS1 DDA</td>
+      <td>BPH2819</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Inositol phosphate metabolism</td>
+    </tr>
+    <tr>
+      <th>20927</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2819</td>
+      <td>Staphylococcus aureus BPH2819 Proteomics MS1 DDA</td>
+      <td>BPH2819</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Pentose phosphate pathway</td>
+    </tr>
+    <tr>
+      <th>20933</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2819</td>
+      <td>Staphylococcus aureus BPH2819 Proteomics MS1 DDA</td>
+      <td>BPH2819</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Pentose and glucuronate interconversions</td>
+    </tr>
+    <tr>
+      <th>24637</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2819</td>
+      <td>Staphylococcus aureus BPH2819 Proteomics MS2 D...</td>
+      <td>BPH2819</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Metabolic pathways</td>
+    </tr>
+    <tr>
+      <th>24675</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2819</td>
+      <td>Staphylococcus aureus BPH2819 Proteomics MS2 D...</td>
+      <td>BPH2819</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Glycolysis / Gluconeogenesis</td>
+    </tr>
+    <tr>
+      <th>24808</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2900</td>
+      <td>Staphylococcus aureus BPH2900 Proteomics MS1 DDA</td>
+      <td>BPH2900</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Metabolic pathways</td>
+    </tr>
+    <tr>
+      <th>24809</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2900</td>
+      <td>Staphylococcus aureus BPH2900 Proteomics MS1 DDA</td>
+      <td>BPH2900</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Microbial metabolism in diverse environments</td>
+    </tr>
+    <tr>
+      <th>24811</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2900</td>
+      <td>Staphylococcus aureus BPH2900 Proteomics MS1 DDA</td>
+      <td>BPH2900</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Biosynthesis of secondary metabolites</td>
+    </tr>
+    <tr>
+      <th>24818</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2900</td>
+      <td>Staphylococcus aureus BPH2900 Proteomics MS1 DDA</td>
+      <td>BPH2900</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Biosynthesis of antibiotics</td>
+    </tr>
+    <tr>
+      <th>24819</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2900</td>
+      <td>Staphylococcus aureus BPH2900 Proteomics MS1 DDA</td>
+      <td>BPH2900</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Carbon metabolism</td>
+    </tr>
+    <tr>
+      <th>24827</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2900</td>
+      <td>Staphylococcus aureus BPH2900 Proteomics MS1 DDA</td>
+      <td>BPH2900</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Staphylococcus aureus infection</td>
+    </tr>
+    <tr>
+      <th>24846</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2900</td>
+      <td>Staphylococcus aureus BPH2900 Proteomics MS1 DDA</td>
+      <td>BPH2900</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Biosynthesis of ansamycins</td>
+    </tr>
+    <tr>
+      <th>24848</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2900</td>
+      <td>Staphylococcus aureus BPH2900 Proteomics MS1 DDA</td>
+      <td>BPH2900</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Starch and sucrose metabolism</td>
+    </tr>
+    <tr>
+      <th>24850</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2900</td>
+      <td>Staphylococcus aureus BPH2900 Proteomics MS1 DDA</td>
+      <td>BPH2900</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Amino sugar and nucleotide sugar metabolism</td>
+    </tr>
+    <tr>
+      <th>24855</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2900</td>
+      <td>Staphylococcus aureus BPH2900 Proteomics MS1 DDA</td>
+      <td>BPH2900</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Glycolysis / Gluconeogenesis</td>
+    </tr>
+    <tr>
+      <th>24861</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2900</td>
+      <td>Staphylococcus aureus BPH2900 Proteomics MS1 DDA</td>
+      <td>BPH2900</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Phosphotransferase system (PTS)</td>
+    </tr>
+    <tr>
+      <th>24873</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2900</td>
+      <td>Staphylococcus aureus BPH2900 Proteomics MS1 DDA</td>
+      <td>BPH2900</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Inositol phosphate metabolism</td>
+    </tr>
+    <tr>
+      <th>24889</th>
+      <td>Up</td>
+      <td>Staphylococcus aureus</td>
+      <td>Staphylococcus aureus BPH2900</td>
+      <td>Staphylococcus aureus BPH2900 Proteomics MS1 DDA</td>
+      <td>BPH2900</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Pentose phosphate pathway</td>
+    </tr>
+    <tr>
+      <th>29227</th>
+      <td>Up</td>
+      <td>Klebsiella pneumoniae</td>
+      <td>Klebsiella pneumoniae KPC2</td>
+      <td>Klebsiella pneumoniae KPC2 Proteomics MS1 DDA</td>
+      <td>KPC2</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>ABC transporters</td>
+    </tr>
+    <tr>
+      <th>29232</th>
+      <td>Up</td>
+      <td>Klebsiella pneumoniae</td>
+      <td>Klebsiella pneumoniae KPC2</td>
+      <td>Klebsiella pneumoniae KPC2 Proteomics MS1 DDA</td>
+      <td>KPC2</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>beta-Lactam resistance</td>
+    </tr>
+    <tr>
+      <th>29234</th>
+      <td>Up</td>
+      <td>Klebsiella pneumoniae</td>
+      <td>Klebsiella pneumoniae KPC2</td>
+      <td>Klebsiella pneumoniae KPC2 Proteomics MS1 DDA</td>
+      <td>KPC2</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Two-component system</td>
+    </tr>
+    <tr>
+      <th>29236</th>
+      <td>Up</td>
+      <td>Klebsiella pneumoniae</td>
+      <td>Klebsiella pneumoniae KPC2</td>
+      <td>Klebsiella pneumoniae KPC2 Proteomics MS1 DDA</td>
+      <td>KPC2</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Oxidative phosphorylation</td>
+    </tr>
+    <tr>
+      <th>29241</th>
+      <td>Up</td>
+      <td>Klebsiella pneumoniae</td>
+      <td>Klebsiella pneumoniae KPC2</td>
+      <td>Klebsiella pneumoniae KPC2 Proteomics MS1 DDA</td>
+      <td>KPC2</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Glycerophospholipid metabolism</td>
+    </tr>
+    <tr>
+      <th>29246</th>
+      <td>Up</td>
+      <td>Klebsiella pneumoniae</td>
+      <td>Klebsiella pneumoniae KPC2</td>
+      <td>Klebsiella pneumoniae KPC2 Proteomics MS1 DDA</td>
+      <td>KPC2</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Cationic antimicrobial peptide (CAMP) resistance</td>
+    </tr>
+    <tr>
+      <th>29247</th>
+      <td>Up</td>
+      <td>Klebsiella pneumoniae</td>
+      <td>Klebsiella pneumoniae KPC2</td>
+      <td>Klebsiella pneumoniae KPC2 Proteomics MS1 DDA</td>
+      <td>KPC2</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Protein export</td>
+    </tr>
+    <tr>
+      <th>29248</th>
+      <td>Up</td>
+      <td>Klebsiella pneumoniae</td>
+      <td>Klebsiella pneumoniae KPC2</td>
+      <td>Klebsiella pneumoniae KPC2 Proteomics MS1 DDA</td>
+      <td>KPC2</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Photosynthesis</td>
+    </tr>
+    <tr>
+      <th>29275</th>
+      <td>Up</td>
+      <td>Klebsiella pneumoniae</td>
+      <td>Klebsiella pneumoniae KPC2</td>
+      <td>Klebsiella pneumoniae KPC2 Proteomics MS1 DDA</td>
+      <td>KPC2</td>
+      <td>Proteomics</td>
+      <td>Proteomics Up</td>
+      <td>Sulfur metabolism</td>
+    </tr>
+  </tbody>
+</table>
+<p>946 rows × 8 columns</p>
+</div>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
 <h1 id="Supplementary-data-(reference-only)">Supplementary data (reference only)<a class="anchor-link" href="#Supplementary-data-(reference-only)">&#182;</a></h1><p>This information is for reference only. Some additional plots are made, which may not be directly relevant to the aim of this visualisation process, but may be of interest as alternative combinations of visualising the data.</p>
 
 </div>
@@ -13912,29 +14756,29 @@ Strains dropped from RNA-Seq Up data as they had no KEGG pathway overlap:
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[5]:</div>
+<div class="prompt input_prompt">In&nbsp;[11]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># glue the species and strain into a separate column</span>
 <span class="n">data</span><span class="p">[</span><span class="s2">&quot;Species_Strain_Type_of_Experiment&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;Species&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span> <span class="o">+</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;Strain&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span> <span class="o">+</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;Type_of_Experiment&quot;</span><span class="p">]</span>
 
 <span class="c1"># filter out the data of interest</span>
-<span class="n">omics_kegg</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span> <span class="p">:</span> <span class="p">,</span> <span class="p">[</span><span class="s1">&#39;Species_Strain_Type_of_Experiment&#39;</span><span class="p">,</span> <span class="s1">&#39;kegg_pathway_name&#39;</span><span class="p">]</span> <span class="p">]</span>
+<span class="n">sample_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span> <span class="p">:</span> <span class="p">,</span> <span class="p">[</span><span class="s1">&#39;Species_Strain_Type_of_Experiment&#39;</span><span class="p">,</span> <span class="s1">&#39;kegg_pathway_name&#39;</span><span class="p">]</span> <span class="p">]</span>
 
 <span class="c1"># this is just a test case to test implementation</span>
-<span class="n">omics_kegg</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">sample_data</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="n">collapse_kegg</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="s2">&quot;|&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">)</span>
-<span class="n">omics_kegg</span> <span class="o">=</span> <span class="n">omics_kegg</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">omics_kegg</span><span class="p">[</span><span class="s1">&#39;Species_Strain_Type_of_Experiment&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">aggregate</span><span class="p">({</span><span class="s1">&#39;kegg_pathway_name&#39;</span><span class="p">:</span><span class="n">collapse_kegg</span><span class="p">})</span>
+<span class="n">sample_data</span> <span class="o">=</span> <span class="n">sample_data</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">sample_data</span><span class="p">[</span><span class="s1">&#39;Species_Strain_Type_of_Experiment&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">aggregate</span><span class="p">({</span><span class="s1">&#39;kegg_pathway_name&#39;</span><span class="p">:</span><span class="n">collapse_kegg</span><span class="p">})</span>
 
 <span class="c1"># extract only strain B36:[pathways] to test implementation</span>
-<span class="n">omics_kegg</span> <span class="o">=</span> <span class="n">omics_kegg</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
-<span class="n">omics_kegg</span> <span class="o">=</span> <span class="n">omics_kegg</span><span class="p">[</span><span class="n">omics_kegg</span><span class="p">[</span><span class="s2">&quot;Species_Strain_Type_of_Experiment&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s2">&quot;B36&quot;</span><span class="p">)]</span>
-<span class="n">omics_kegg</span> <span class="o">=</span> <span class="n">omics_kegg</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;Species_Strain_Type_of_Experiment&quot;</span><span class="p">)</span>
+<span class="n">sample_data</span> <span class="o">=</span> <span class="n">sample_data</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+<span class="n">sample_data</span> <span class="o">=</span> <span class="n">sample_data</span><span class="p">[</span><span class="n">sample_data</span><span class="p">[</span><span class="s2">&quot;Species_Strain_Type_of_Experiment&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s2">&quot;B36&quot;</span><span class="p">)]</span>
+<span class="n">sample_data</span> <span class="o">=</span> <span class="n">sample_data</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;Species_Strain_Type_of_Experiment&quot;</span><span class="p">)</span>
 
 <span class="c1"># reformat into UpSetPlot compatible input</span>
-<span class="n">omics_kegg</span> <span class="o">=</span> <span class="n">omics_kegg</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()[</span><span class="s1">&#39;kegg_pathway_name&#39;</span><span class="p">]</span>
-<span class="n">omics_kegg</span> <span class="o">=</span> <span class="n">from_contents</span><span class="p">(</span><span class="n">omics_kegg</span><span class="p">)</span>
-<span class="n">omics_kegg</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+<span class="n">sample_data</span> <span class="o">=</span> <span class="n">sample_data</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()[</span><span class="s1">&#39;kegg_pathway_name&#39;</span><span class="p">]</span>
+<span class="n">sample_data</span> <span class="o">=</span> <span class="n">from_contents</span><span class="p">(</span><span class="n">sample_data</span><span class="p">)</span>
+<span class="n">sample_data</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
 
     </div>
@@ -13947,7 +14791,7 @@ Strains dropped from RNA-Seq Up data as they had no KEGG pathway overlap:
 
 <div class="output_area">
 
-    <div class="prompt output_prompt">Out[5]:</div>
+    <div class="prompt output_prompt">Out[11]:</div>
 
 
 
@@ -13983,25 +14827,25 @@ Strains dropped from RNA-Seq Up data as they had no KEGG pathway overlap:
   </thead>
   <tbody>
     <tr>
-      <td rowspan="5" valign="top">True</td>
-      <td rowspan="5" valign="top">True</td>
-      <td>True</td>
+      <th rowspan="5" valign="top">True</th>
+      <th rowspan="5" valign="top">True</th>
+      <th>True</th>
       <td>Fatty acid degradation</td>
     </tr>
     <tr>
-      <td>True</td>
+      <th>True</th>
       <td>Lysine biosynthesis</td>
     </tr>
     <tr>
-      <td>True</td>
+      <th>True</th>
       <td>Lysine degradation</td>
     </tr>
     <tr>
-      <td>True</td>
+      <th>True</th>
       <td>Penicillin and cephalosporin biosynthesis</td>
     </tr>
     <tr>
-      <td>True</td>
+      <th>True</th>
       <td>2-Oxocarboxylic acid metabolism</td>
     </tr>
   </tbody>
@@ -14024,11 +14868,11 @@ Strains dropped from RNA-Seq Up data as they had no KEGG pathway overlap:
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[6]:</div>
+<div class="prompt input_prompt">In&nbsp;[12]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># this is the actual plotting block, the names overlap here but this is fixed in the actual plots</span>
-<span class="n">upset</span> <span class="o">=</span> <span class="n">UpSet</span><span class="p">(</span><span class="n">omics_kegg</span><span class="p">,</span> <span class="n">subset_size</span><span class="o">=</span><span class="s1">&#39;count&#39;</span><span class="p">)</span><span class="c1">#, intersection_plot_elements=3)</span>
+<span class="n">upset</span> <span class="o">=</span> <span class="n">UpSet</span><span class="p">(</span><span class="n">sample_data</span><span class="p">,</span> <span class="n">subset_size</span><span class="o">=</span><span class="s1">&#39;count&#39;</span><span class="p">)</span><span class="c1">#, intersection_plot_elements=3)</span>
 <span class="n">upset</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
@@ -14049,7 +14893,7 @@ Strains dropped from RNA-Seq Up data as they had no KEGG pathway overlap:
 
 
 <div class="output_png output_subarea ">
-<img src="data:image/png;base64,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ixYtIicnh1WrVvHwww8DzrChU6dOrFy5kqysLFq0aAHApk2bSE9PJycnh0aNGnmHTxkZGfzf//0fn3zyCU899RQjRozw1rtp0ybee+89nnnmmULtKW8dvu68805WrFhBTk4Ohw4d4h//+EexY/yVv3btWqZPn05mZibLli1j6tSpfP755wG/ht999x0pKSkkJCQwadIk7rnnHu++1atXk5iYSFJSEhMnTiQqKoq9e/cC8MQTT9ChQwcGDhzIzp07S63jhx9+4PDhw96AA85JrkGDBvHSSy8VO37RokVce+21NGvWjNNOO421a9f6LTcjI4MePXrQt29fJk2a5G3btGnTaNiwIStWrGDFihW8/vrrbN68mYULF7Jx40ZWrVrFiy++GNCb9sSJE2UeU5Fjg1HR5fur8nexgFYJPENOz1e/fv2IjY2lTp063H333bz77rtER0cDkJmZyZAhQwCIjIykYcOGADRp0oTWrVsDcNlll7Flyxby8/NZuXIlAwcOJCUlheHDhxd606alpfk9C1SeOopavnw5nTt3pl27dmRmZrJhw4aAys/KyqJ3797ExMRQv359evfuTVZWVsCvoWfImZuby9ixYwvNQ7Vr146cnByWL1/OuHHjOHz4MAUFBWzbto327duTlZVFUlISI0eO9Fv23LlzSUxMpFWrVtx9993UrVu30P677rqLGTNmFBtuzZ49m379+gHQr18/Zs+e7bf8QYMGsWbNGtLS0lixYgVXXXUVR44cYfHixbz11lukpKTQuXNn9uzZw6ZNm/j444/p378/kZGRxMfH07lz5zJfn0svvbTMYzwuueSSgI8tqjxnLyt6CcfFF18c8HPL83uDBbQqExUVxfLly+nTpw+LFi2iT58+pR7v+48UGRlJQUEBJ06coGHDhoWC5Zo1a7zHlfcSGn91+Dp8+DAjRoxgxowZrF69msGDBwc8rKjMZDs9e/bkk08+Kba9efPmxMTEsGHDBuLi4oiOjqZ3794AXH/99axbt85veTfccAM5OTl89NFHjBw5stCQE6BRo0b87ne/Y/Lkk/l9d+/eTWZmJsOGDaNFixZMmDCBuXPnoqqMHj3a2xv3iI+P55ZbbmHWrFlERkayYcMGVJVx48Z5/3YbNmzgmmuuASg0dA5EmzZtuPzyywM69o477ihX2b5iY2MDOq5evXoVPssZFxdH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
+<img src="data:image/png;base64,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
 "
 >
 </div>
@@ -14079,50 +14923,20 @@ if you see this line pretend its not here, is a hidden note to self
 </div>
 </div>
 </div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Below is a comparison of omics data (Metabolomics, Proteomics and Transcriptomics).</p>
+
+</div>
+</div>
+</div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[35]:</div>
+<div class="prompt input_prompt">In&nbsp;[13]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># collapse across GC-MS and LC-MS</span>
-<span class="n">subset</span> <span class="o">=</span> <span class="n">intermediate_data</span>
-<span class="n">omics_kegg</span> <span class="o">=</span> <span class="n">subset</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span> <span class="p">:</span> <span class="p">,</span> <span class="p">[</span><span class="s1">&#39;Species_Strain&#39;</span><span class="p">,</span> <span class="s1">&#39;Species_Strain_Type_of_Experiment&#39;</span><span class="p">,</span> <span class="s1">&#39;kegg_pathway_name&#39;</span><span class="p">,</span> <span class="s1">&#39;Species&#39;</span><span class="p">,</span> <span class="s1">&#39;Strain&#39;</span><span class="p">,</span> <span class="s1">&#39;Type_of_Experiment&#39;</span><span class="p">,</span> <span class="s1">&#39;Direction&#39;</span><span class="p">,</span> <span class="s1">&#39;Type_of_Experiment_Direction&#39;</span><span class="p">]</span> <span class="p">]</span>
-<span class="n">omics_kegg</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">before</span> <span class="o">=</span> <span class="n">omics_kegg</span><span class="o">.</span><span class="n">shape</span>
-
-<span class="c1"># metabolomics block, also split into subsets based on regulation state (up or down)</span>
-<span class="n">metabolomics</span> <span class="o">=</span> <span class="n">omics_kegg</span><span class="p">[</span><span class="n">omics_kegg</span><span class="o">.</span><span class="n">Type_of_Experiment</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Metabolomics&quot;</span><span class="p">)]</span>
-<span class="n">metabolomics</span><span class="p">[</span><span class="s2">&quot;Type_of_Experiment&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Metabolomics&quot;</span>
-<span class="n">metabolomics</span><span class="p">[</span><span class="s2">&quot;Type_of_Experiment_Direction&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">metabolomics</span><span class="p">[</span><span class="s2">&quot;Type_of_Experiment&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span> <span class="o">+</span> <span class="n">metabolomics</span><span class="p">[</span><span class="s2">&quot;Direction&quot;</span><span class="p">]</span>
-<span class="n">metabolomics_up</span> <span class="o">=</span> <span class="n">metabolomics</span><span class="p">[</span><span class="n">metabolomics</span><span class="p">[</span><span class="s2">&quot;Direction&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Down&quot;</span><span class="p">]</span>
-<span class="n">metabolomics_dn</span> <span class="o">=</span> <span class="n">metabolomics</span><span class="p">[</span><span class="n">metabolomics</span><span class="p">[</span><span class="s2">&quot;Direction&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Up&quot;</span><span class="p">]</span>
-<span class="k">assert</span> <span class="p">(</span><span class="n">metabolomics</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="p">(</span><span class="n">metabolomics_up</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">metabolomics_dn</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="s2">&quot;Total pathways surveyed should be the same&quot;</span>
-
-<span class="c1"># proteomics block, also split into subsets based on regulation state (up or down)</span>
-<span class="n">proteomics</span> <span class="o">=</span> <span class="n">omics_kegg</span><span class="p">[</span><span class="n">omics_kegg</span><span class="o">.</span><span class="n">Type_of_Experiment</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Proteomics&quot;</span><span class="p">)]</span>
-<span class="n">proteomics</span><span class="p">[</span><span class="s2">&quot;Type_of_Experiment&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Proteomics&quot;</span>
-<span class="n">proteomics</span><span class="p">[</span><span class="s2">&quot;Type_of_Experiment_Direction&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">proteomics</span><span class="p">[</span><span class="s2">&quot;Type_of_Experiment&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span> <span class="o">+</span> <span class="n">proteomics</span><span class="p">[</span><span class="s2">&quot;Direction&quot;</span><span class="p">]</span>
-<span class="n">proteomics_up</span> <span class="o">=</span> <span class="n">proteomics</span><span class="p">[</span><span class="n">proteomics</span><span class="p">[</span><span class="s2">&quot;Direction&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Down&quot;</span><span class="p">]</span>
-<span class="n">proteomics_dn</span> <span class="o">=</span> <span class="n">proteomics</span><span class="p">[</span><span class="n">proteomics</span><span class="p">[</span><span class="s2">&quot;Direction&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Up&quot;</span><span class="p">]</span>
-<span class="k">assert</span> <span class="p">(</span><span class="n">proteomics</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="p">(</span><span class="n">proteomics_up</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">proteomics_dn</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="s2">&quot;Total pathways surveyed should be the same&quot;</span>
-
-<span class="c1"># rnaseq block, also split into subsets based on regulation state (up or down)</span>
-<span class="n">rna_seq</span> <span class="o">=</span> <span class="n">omics_kegg</span><span class="p">[</span><span class="n">omics_kegg</span><span class="o">.</span><span class="n">Type_of_Experiment</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;RNA-Seq&quot;</span><span class="p">)]</span>
-<span class="n">rna_seq</span><span class="p">[</span><span class="s2">&quot;Type_of_Experiment&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;RNA-Seq&quot;</span>
-<span class="n">rna_seq</span><span class="p">[</span><span class="s2">&quot;Type_of_Experiment_Direction&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rna_seq</span><span class="p">[</span><span class="s2">&quot;Type_of_Experiment&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span> <span class="o">+</span> <span class="n">rna_seq</span><span class="p">[</span><span class="s2">&quot;Direction&quot;</span><span class="p">]</span>
-<span class="n">rna_seq_up</span> <span class="o">=</span> <span class="n">rna_seq</span><span class="p">[</span><span class="n">rna_seq</span><span class="p">[</span><span class="s2">&quot;Direction&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Down&quot;</span><span class="p">]</span>
-<span class="n">rna_seq_dn</span> <span class="o">=</span> <span class="n">rna_seq</span><span class="p">[</span><span class="n">rna_seq</span><span class="p">[</span><span class="s2">&quot;Direction&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Up&quot;</span><span class="p">]</span>
-<span class="k">assert</span> <span class="p">(</span><span class="n">rna_seq</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="p">(</span><span class="n">rna_seq_up</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">rna_seq_dn</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="s2">&quot;Total pathways surveyed should be the same&quot;</span>
-
-<span class="n">omics_kegg</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">rna_seq</span><span class="p">,</span> <span class="n">metabolomics</span><span class="p">,</span> <span class="n">proteomics</span><span class="p">],</span> <span class="n">verify_integrity</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">omics_kegg_direction</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">rna_seq_up</span><span class="p">,</span> <span class="n">rna_seq_dn</span><span class="p">,</span> <span class="n">metabolomics_up</span><span class="p">,</span> <span class="n">metabolomics_dn</span><span class="p">,</span> <span class="n">proteomics_up</span><span class="p">,</span> <span class="n">proteomics_dn</span><span class="p">],</span> <span class="n">verify_integrity</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-<span class="k">assert</span> <span class="n">before</span> <span class="o">==</span> <span class="n">omics_kegg</span><span class="o">.</span><span class="n">shape</span>
-<span class="k">assert</span> <span class="n">before</span> <span class="o">==</span> <span class="n">omics_kegg_direction</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="s2">&quot;Original and recombined data must have identical dimensions!&quot;</span>
-<span class="n">omics_kegg</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">omics_kegg_direction</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-<span class="n">omics_kegg</span> <span class="o">=</span> <span class="n">reformat_data_for_upsetplot</span><span class="p">(</span><span class="n">omics_kegg</span><span class="p">,</span> <span class="s2">&quot;Type_of_Experiment&quot;</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">make_upsetplot</span><span class="p">(</span><span class="n">reformat_data_for_upsetplot</span><span class="p">(</span><span class="n">omics_kegg</span><span class="p">,</span> <span class="s2">&quot;Type_of_Experiment&quot;</span><span class="p">))</span>
 </pre></div>
 
     </div>
@@ -14132,43 +14946,6 @@ if you see this line pretend its not here, is a hidden note to self
 <div class="output_wrapper">
 <div class="output">
 
-
-<div class="output_area">
-
-    <div class="prompt"></div>
-
-
-<div class="output_subarea output_stream output_stderr output_text">
-<pre>/Users/tche0054/miniconda3/envs/graph/lib/python3.7/site-packages/ipykernel_launcher.py:9: SettingWithCopyWarning: 
-A value is trying to be set on a copy of a slice from a DataFrame.
-Try using .loc[row_indexer,col_indexer] = value instead
-
-See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
-  if __name__ == &#39;__main__&#39;:
-/Users/tche0054/miniconda3/envs/graph/lib/python3.7/site-packages/ipykernel_launcher.py:10: SettingWithCopyWarning: 
-A value is trying to be set on a copy of a slice from a DataFrame.
-Try using .loc[row_indexer,col_indexer] = value instead
-
-See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
-  # Remove the CWD from sys.path while we load stuff.
-/Users/tche0054/miniconda3/envs/graph/lib/python3.7/site-packages/ipykernel_launcher.py:17: SettingWithCopyWarning: 
-A value is trying to be set on a copy of a slice from a DataFrame.
-Try using .loc[row_indexer,col_indexer] = value instead
-
-See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
-/Users/tche0054/miniconda3/envs/graph/lib/python3.7/site-packages/ipykernel_launcher.py:18: SettingWithCopyWarning: 
-A value is trying to be set on a copy of a slice from a DataFrame.
-Try using .loc[row_indexer,col_indexer] = value instead
-
-See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
-/Users/tche0054/miniconda3/envs/graph/lib/python3.7/site-packages/ipykernel_launcher.py:25: SettingWithCopyWarning: 
-A value is trying to be set on a copy of a slice from a DataFrame.
-Try using .loc[row_indexer,col_indexer] = value instead
-
-See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
-</pre>
-</div>
-</div>
 
 <div class="output_area">
 
@@ -14182,85 +14959,42 @@ RNA-Seq as one plot
 
 Strains dropped from Metabolomics data as they had no KEGG pathway overlap:
                                    0
-0       Klebsiella pneumoniae AJ218
-1     Streptococcus pneumoniae 4496
-2     Staphylococcus aureus BPH2760
-3      Streptococcus pneumoniae 947
-4              Escherichia coli B36
-5      Streptococcus pyogenes PS003
-6   Streptococcus pneumoniae 180/15
-7        Klebsiella pneumoniae KPC2
-8    Streptococcus pneumoniae 180/2
+0        Klebsiella variicola AJ292
+1   Streptococcus pneumoniae 180/15
+2        Klebsiella pneumoniae KPC2
+3    Streptococcus pneumoniae 180/2
+4      Streptococcus pyogenes PS003
+5       Klebsiella pneumoniae AJ218
+6     Streptococcus pneumoniae 4496
+7     Staphylococcus aureus BPH2760
+8              Escherichia coli B36
 9     Staphylococcus aureus BPH2900
-10       Klebsiella variicola AJ292
+10     Streptococcus pneumoniae 947
 
 Strains dropped from Proteomics data as they had no KEGG pathway overlap:
                                    0
-0          Escherichia coli MS14386
-1     Streptococcus pneumoniae 4496
-2     Streptococcus pyogenes HKU419
-3      Streptococcus pneumoniae 947
-4          Escherichia coli MS14385
-5              Escherichia coli B36
-6       Streptococcus pyogenes 5448
-7      Streptococcus pyogenes PS003
-8      Streptococcus pyogenes SP444
-9          Escherichia coli MS14384
-10  Streptococcus pneumoniae 180/15
-11   Streptococcus pneumoniae 180/2
-12     Streptococcus pyogenes PS006
+0   Streptococcus pneumoniae 180/15
+1          Escherichia coli MS14385
+2      Streptococcus pyogenes SP444
+3    Streptococcus pneumoniae 180/2
+4      Streptococcus pyogenes PS003
+5     Streptococcus pyogenes HKU419
+6     Streptococcus pneumoniae 4496
+7       Streptococcus pyogenes 5448
+8      Streptococcus pyogenes PS006
+9              Escherichia coli B36
+10         Escherichia coli MS14384
+11         Escherichia coli MS14386
+12     Streptococcus pneumoniae 947
 
 Strains dropped from RNA-Seq data as they had no KEGG pathway overlap:
                                 0
-0   Streptococcus pyogenes SP444
-1  Streptococcus pyogenes HKU419
-2    Streptococcus pyogenes 5448
+0    Streptococcus pyogenes 5448
+1   Streptococcus pyogenes SP444
+2  Streptococcus pyogenes HKU419
 </pre>
 </div>
 </div>
-
-<div class="output_area">
-
-    <div class="prompt"></div>
-
-
-<div class="output_subarea output_stream output_stderr output_text">
-<pre>/Users/tche0054/miniconda3/envs/graph/lib/python3.7/site-packages/ipykernel_launcher.py:26: SettingWithCopyWarning: 
-A value is trying to be set on a copy of a slice from a DataFrame.
-Try using .loc[row_indexer,col_indexer] = value instead
-
-See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
-</pre>
-</div>
-</div>
-
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>Below is a comparison of omics data (Metabolomics, Proteomics and Transcriptomics). In the next section, each assay is treated as independent instead.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[36]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">make_upsetplot</span><span class="p">(</span><span class="n">omics_kegg</span><span class="p">)</span>
-</pre></div>
-
-    </div>
-</div>
-</div>
-
-<div class="output_wrapper">
-<div class="output">
-
 
 <div class="output_area">
 
@@ -14313,7 +15047,7 @@ See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stabl
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[40]:</div>
+<div class="prompt input_prompt">In&nbsp;[14]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># we saved this data earlier, no need to reload</span>
@@ -14371,81 +15105,81 @@ RNA-Seq as one plot
 
 Strains dropped from Metabolomics GC-MS data as they had no KEGG pathway overlap:
                                    0
-0       Klebsiella pneumoniae AJ218
-1     Streptococcus pneumoniae 4496
-2     Staphylococcus aureus BPH2986
-3     Staphylococcus aureus BPH2760
-4     Streptococcus pyogenes HKU419
-5      Streptococcus pneumoniae 947
-6              Escherichia coli B36
-7       Streptococcus pyogenes 5448
-8      Streptococcus pyogenes PS003
-9     Staphylococcus aureus BPH2947
-10  Streptococcus pneumoniae 180/15
-11       Klebsiella pneumoniae KPC2
-12   Streptococcus pneumoniae 180/2
-13     Streptococcus pyogenes PS006
-14       Klebsiella variicola AJ292
-15         Escherichia coli MS14387
+0        Klebsiella variicola AJ292
+1   Streptococcus pneumoniae 180/15
+2        Klebsiella pneumoniae KPC2
+3    Streptococcus pneumoniae 180/2
+4      Streptococcus pyogenes PS003
+5     Streptococcus pyogenes HKU419
+6       Klebsiella pneumoniae AJ218
+7     Streptococcus pneumoniae 4496
+8       Streptococcus pyogenes 5448
+9      Streptococcus pyogenes PS006
+10    Staphylococcus aureus BPH2760
+11    Staphylococcus aureus BPH2947
+12         Escherichia coli MS14387
+13             Escherichia coli B36
+14    Staphylococcus aureus BPH2986
+15     Streptococcus pneumoniae 947
 
 Strains dropped from Metabolomics LC-MS data as they had no KEGG pathway overlap:
                                      0
-0         Klebsiella pneumoniae AJ218
-1    Klebsiella variicola 03-311-0071
-2       Streptococcus pneumoniae 4496
-3       Staphylococcus aureus BPH2760
-4        Streptococcus pneumoniae 947
-5                Escherichia coli B36
+0          Klebsiella variicola AJ292
+1     Streptococcus pneumoniae 180/15
+2          Klebsiella pneumoniae KPC2
+3      Streptococcus pneumoniae 180/2
+4         Klebsiella pneumoniae AJ218
+5       Streptococcus pneumoniae 4496
 6          Klebsiella variicola AJ055
-7     Streptococcus pneumoniae 180/15
-8          Klebsiella pneumoniae KPC2
-9      Streptococcus pneumoniae 180/2
-10      Staphylococcus aureus BPH2900
-11      Staphylococcus aureus BPH2819
-12         Klebsiella variicola AJ292
-13           Escherichia coli MS14387
-14  Klebsiella variicola 04153260899A
+7   Klebsiella variicola 04153260899A
+8       Staphylococcus aureus BPH2760
+9            Escherichia coli MS14387
+10               Escherichia coli B36
+11      Staphylococcus aureus BPH2900
+12      Staphylococcus aureus BPH2819
+13   Klebsiella variicola 03-311-0071
+14       Streptococcus pneumoniae 947
 
 Strains dropped from Proteomics MS1 DDA data as they had no KEGG pathway overlap:
                                    0
-0          Escherichia coli MS14386
-1     Streptococcus pneumoniae 4496
-2     Streptococcus pyogenes HKU419
-3      Streptococcus pneumoniae 947
-4          Escherichia coli MS14385
-5              Escherichia coli B36
-6       Streptococcus pyogenes 5448
-7      Streptococcus pyogenes PS003
-8      Streptococcus pyogenes SP444
-9          Escherichia coli MS14384
-10  Streptococcus pneumoniae 180/15
-11   Streptococcus pneumoniae 180/2
-12     Streptococcus pyogenes PS006
-13         Escherichia coli MS14387
+0   Streptococcus pneumoniae 180/15
+1          Escherichia coli MS14385
+2      Streptococcus pyogenes SP444
+3    Streptococcus pneumoniae 180/2
+4      Streptococcus pyogenes PS003
+5     Streptococcus pyogenes HKU419
+6     Streptococcus pneumoniae 4496
+7       Streptococcus pyogenes 5448
+8      Streptococcus pyogenes PS006
+9          Escherichia coli MS14387
+10             Escherichia coli B36
+11         Escherichia coli MS14384
+12         Escherichia coli MS14386
+13     Streptococcus pneumoniae 947
 
 Strains dropped from Proteomics MS2 DIA/SWATH data as they had no KEGG pathway overlap:
                                    0
-0          Escherichia coli MS14386
-1     Streptococcus pneumoniae 4496
-2     Streptococcus pyogenes HKU419
-3      Streptococcus pneumoniae 947
-4          Escherichia coli MS14385
-5              Escherichia coli B36
-6       Streptococcus pyogenes 5448
-7      Streptococcus pyogenes PS003
-8      Streptococcus pyogenes SP444
-9          Escherichia coli MS14384
-10  Streptococcus pneumoniae 180/15
-11   Streptococcus pneumoniae 180/2
-12     Streptococcus pyogenes PS006
-13         Escherichia coli MS14387
+0   Streptococcus pneumoniae 180/15
+1          Escherichia coli MS14385
+2      Streptococcus pyogenes SP444
+3    Streptococcus pneumoniae 180/2
+4      Streptococcus pyogenes PS003
+5     Streptococcus pyogenes HKU419
+6     Streptococcus pneumoniae 4496
+7       Streptococcus pyogenes 5448
+8      Streptococcus pyogenes PS006
+9          Escherichia coli MS14387
+10             Escherichia coli B36
+11         Escherichia coli MS14384
+12         Escherichia coli MS14386
+13     Streptococcus pneumoniae 947
 
 Strains dropped from RNA-Seq data as they had no KEGG pathway overlap:
                                 0
-0   Streptococcus pyogenes SP444
+0       Escherichia coli MS14387
 1    Streptococcus pyogenes 5448
-2  Streptococcus pyogenes HKU419
-3       Escherichia coli MS14387
+2   Streptococcus pyogenes SP444
+3  Streptococcus pyogenes HKU419
 </pre>
 </div>
 </div>
@@ -14464,7 +15198,7 @@ Strains dropped from RNA-Seq data as they had no KEGG pathway overlap:
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[39]:</div>
+<div class="prompt input_prompt">In&nbsp;[15]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">make_upsetplot</span><span class="p">(</span><span class="n">omics_kegg</span><span class="p">)</span>
@@ -14567,7 +15301,7 @@ Strains dropped from RNA-Seq data as they had no KEGG pathway overlap:
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[30]:</div>
+<div class="prompt input_prompt">In&nbsp;[16]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># filter out the categories of interest</span>
@@ -14648,7 +15382,7 @@ Strains dropped from RNA-Seq data as they had no KEGG pathway overlap:
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[31]:</div>
+<div class="prompt input_prompt">In&nbsp;[17]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># the plotting block</span>
