@@ -126,7 +126,7 @@ strain_to_accessions_cleaned <- strain_to_accessions %>%
 
 strain_to_protein_id <- strain_to_accessions_cleaned %>%
   left_join(chromosome_id_to_protein_id, by =c( "chromosome_refseq_id" = "chromosome_refseq_id")) %>%
-  rename( entity_id = "protein_refseq_id")
+  dplyr::rename( entity_id = "protein_refseq_id")
 
 list_of_strains <- strain_to_protein_id %>%
                    distinct( Species, Strain)
@@ -141,12 +141,15 @@ list_of_strains <- strain_to_protein_id %>%
 ```{r}
 
 refseq_id_to_kegg_pathway_id_table <- vroom::vroom( refseq_id_to_kegg_pathway_id_file )  %>%
-                         rename( Species = "Query_Species",
+                         dplyr::rename( Species = "Query_Species",
                                  Strain = "Query_Strain",
                                  entity_id = "query_acc.ver") %>%
-                         rename( kegg_pathway_id = "cleaned_kegg_pathway_id") %>%
+                         dplyr::rename( kegg_pathway_id = "cleaned_kegg_pathway_id") %>%
                          dplyr::distinct( Species, Strain, kegg_pathway_id, entity_id) %>%
                          mutate( entity_type= "Protein")
+
+kegg_pathways_to_include <- refseq_id_to_kegg_pathway_id_table %>%
+    distinct(kegg_pathway_id)
 
 metabolite_id_to_kegg_pathway_id_table_raw <- vroom::vroom( metabolite_id_to_kegg_pathway_id_file)  
 
@@ -158,9 +161,10 @@ metabolite_id_to_kegg_pathway_id_table <-   metabolite_id_to_kegg_pathway_id_tab
   dplyr::distinct( Species, Strain, entity_id, pathway_id) %>%
   filter( !is.na(pathway_id)) %>%
   mutate( pathway_id = str_replace ( pathway_id, "^path:ko", "")) %>%
-  rename( kegg_pathway_id = "pathway_id") %>%
+  dplyr::rename( kegg_pathway_id = "pathway_id") %>%
   dplyr::distinct( Species, Strain, kegg_pathway_id, entity_id) %>%
-  mutate( entity_type= "Metabolite")
+  mutate( entity_type= "Metabolite") %>%
+  inner_join( kegg_pathways_to_include, by = "kegg_pathway_id")
             
 entity_id_to_kegg_pathway_id_table <- refseq_id_to_kegg_pathway_id_table %>%
     bind_rows( metabolite_id_to_kegg_pathway_id_table)

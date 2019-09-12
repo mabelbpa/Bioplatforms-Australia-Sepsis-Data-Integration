@@ -51,6 +51,10 @@ transcriptomics_data_dir <- file.path( owncloud_dir, "Transcriptomics")
 transcriptomics_master_table_dir <- file.path( owncloud_dir, "Master_Tables", version_date, "Transcriptomics" ) 
 transcriptomics_abundances_dir <- file.path( transcriptomics_master_table_dir, "Abundances" ) 
 
+
+abundances_master_table_dir <- file.path( owncloud_dir, "Master_Tables", version_date, 
+                                          "Multi-omics/Abundances" ) 
+
 ```
 
 ## Files Management
@@ -64,9 +68,11 @@ kegg_map_title <- vroom::vroom( kegg_map_title_file,
                                               "kegg_pathway_name") )
 
 # To be updated 
-abundances_table_file <- file.path(transcriptomics_abundances_dir, 
-                                   "transcriptomics_log_cpm_abundances_values.tsv" )
+# abundances_table_file <- file.path(transcriptomics_abundances_dir, 
+#                                    "transcriptomics_log_cpm_abundances_values.tsv" )
 
+abundances_table_file <- file.path( abundances_master_table_dir, 
+                                    "multi_omics_master_heatmap_table.tsv")
 
 refseq_id_to_kegg_pathway_id_file <- file.path( owncloud_dir, 
                          "Annotations_and_Mapping/KEGG_Annotations_Stable_Versions", 
@@ -115,6 +121,10 @@ refseq_id_to_kegg_pathway_id_table <- vroom::vroom( refseq_id_to_kegg_pathway_id
   dplyr::distinct( Species, Strain, kegg_pathway_id, entity_id) %>%
   mutate( entity_type= "Protein")
 
+
+kegg_pathways_to_include <- refseq_id_to_kegg_pathway_id_table %>%
+    distinct(kegg_pathway_id)
+
 metabolite_id_to_kegg_pathway_id_table_raw <- vroom::vroom( metabolite_id_to_kegg_pathway_id_file)  
 
 metabolite_id_to_kegg_pathway_id_table <-   metabolite_id_to_kegg_pathway_id_table_raw %>%
@@ -127,7 +137,8 @@ metabolite_id_to_kegg_pathway_id_table <-   metabolite_id_to_kegg_pathway_id_tab
   mutate( pathway_id = str_replace ( pathway_id, "^path:ko", "")) %>%
   dplyr::rename( kegg_pathway_id = "pathway_id") %>%
   dplyr::distinct( Species, Strain, kegg_pathway_id, entity_id) %>%
-  mutate( entity_type= "Metabolite")
+  mutate( entity_type= "Metabolite") %>%
+  inner_join( kegg_pathways_to_include, by = "kegg_pathway_id")
             
 entity_id_to_kegg_pathway_id_table <- refseq_id_to_kegg_pathway_id_table %>%
     bind_rows( metabolite_id_to_kegg_pathway_id_table)
@@ -138,10 +149,15 @@ entity_id_to_kegg_pathway_id_table <- refseq_id_to_kegg_pathway_id_table %>%
 ## Read abundances master table (draft stage)
 ```{r}
 
-abundances_table <- vroom::vroom( abundances_table_file ) 
+abundances_table <- vroom::vroom( abundances_table_file )  %>% 
+                    dplyr::mutate(  Log_Counts = case_when( is.na( Log_Counts)  ~ 0,
+                                                            TRUE ~ Log_Counts) )
 
 
 distinct(abundances_table, Species, Strain)
+
+
+abundances_table %>% filter (is.na( Log_Counts))
 
 ```
 
@@ -149,7 +165,7 @@ distinct(abundances_table, Species, Strain)
 ```{r}
 
 design_table <- abundances_table %>%
-  distinct( Species, Strain, replicate_name, Treatment_Type)
+  distinct( Species, Strain, replicate_name, Treatment_Type, Type_of_Experiment)
 
 ```
 
@@ -207,13 +223,13 @@ design_table_list <- design_table %>%
     arrange( Species, Strain, replicate_name ) %>%
     dplyr::mutate( Treatment_Type = str_replace( Treatment_Type, " ", "_")%>%
                                     str_replace( "\\+", "plus")  ) %>%
-    group_by( Species, Strain ) %>%
+    group_by( Species, Strain, Type_of_Experiment ) %>%
     nest( data = c (  replicate_name, Treatment_Type) )  %>%
     dplyr::mutate( design_matrix = purrr::map(data , get_design_matrix )    ) %>%
     dplyr::select(-data ) %>%
-    ungroup( Species, Strain)
+    ungroup( Species, Strain, Type_of_Experiment)
     
-# design_table_list$design_matrix[[1]]   
+# design_table_list$design_matrix[[64]]   
 
 ```
 
@@ -229,6 +245,8 @@ my_pivot_norm_expr_matrix <- function( input_table) {
                  values_from = Log_Counts) %>%
     column_to_rownames( "entity_id") %>%
     as.matrix()
+  
+  output_matrix[is.na(output_matrix)] <- 0
   
   return( output_matrix)
   
@@ -294,7 +312,7 @@ camera_parameters_table <- list_of_abundances_table %>%
   left_join( list_of_gene_sets_camera, 
              by = c("Species", "Strain", "entity_type"))  %>%
   left_join( design_table_list, 
-             by = c("Species", "Strain") ) %>%
+             by = c("Species", "Strain", "Type_of_Experiment") ) %>%
   left_join( lists_of_contrasts, by = "Species")
 
 
@@ -333,6 +351,14 @@ which(is.na(  camera_parameters_table$norm_expr_matrix[[1]]))
 saveRDS(camera_test_output, file=camera_test_full_output_rds_file   )
 
 
+# camera_parameters_table$design_matrix[[11]]
+# camera_parameters_table$contrast_vector[[11]]
+# camera_parameters_table$norm_expr_matrix[[38]]
+
+# which( is.na( camera_parameters_table$norm_expr_matrix[[38]]) )
+# camera_parameters_table$norm_expr_matrix[[38]] %>% as.tibble()
+# camera_parameters_table$norm_expr_matrix[[38]][1309]
+
 ```
 
 
@@ -349,6 +375,25 @@ camera_test_output_unnested <- camera_test_output %>%
 write_tsv( camera_test_output_unnested, 
            path=camera_test_full_output_file)
 
+
+```
+
+
+
+```{r}
+set_not_na <- camera_test_output_unnested %>%
+  filter ( !is.na(FDR)) %>%
+  distinct( Species, Strain, Type_of_Experiment, contrast) 
+
+
+set_is_na <- camera_test_output_unnested %>%
+  filter ( is.na(FDR)) %>%
+  distinct( Species, Strain, Type_of_Experiment, contrast) 
+
+
+dplyr::setdiff( set_not_na, set_is_na)
+dplyr::setdiff( set_is_na, set_not_na)
+dplyr::intersect( set_is_na, set_not_na)
 
 
 ```
