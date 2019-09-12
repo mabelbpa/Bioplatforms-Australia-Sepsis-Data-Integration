@@ -1,0 +1,307 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+## Libraries management 
+```{r}
+if( !require(pacman)) {
+  install.packages("pacman")
+  library(pacman)
+}
+
+p_load(tidyverse)
+p_load(iheatmapr)
+p_load(tidyselect)
+
+base_dir <- here::here() # "/home/ignatius/PostDoc/2019/Sepsis"
+source( file.path( base_dir, "Source/Common/helper_functions.R") )
+source( file.path( base_dir, "Source/Common/common_parameters.R") )
+
+```
+
+nohup time Rscript --vanilla -e "rmarkdown::render('plot_perc_kegg_pathway_mapped.Rmd', output_file='plot_perc_kegg_pathway_mapped.html') " > plot_perc_kegg_pathway_mapped.log 2>&1 &
+
+
+## Global Parameters
+```{r}
+best_e_value_to_use <- 10^-3
+
+## Parameters to select rows for printing the heat maps
+## Show only rows with >= 30% completeness for > 80% of the strains
+percent_kegg_nodes_mapped_threshold <- 30
+proportion_of_strains_above_threshold <- 0.8 
+```
+
+## Directories Management
+```{r}
+
+kegg_annotations_dir <- file.path( owncloud_dir, "Multi-omics/Results/KEGG_Annotations")
+
+kegg_figures_dir <- file.path( oc_results_dir, "KEGG_Annotations/Figures")
+
+create_dir_if_not_exists( file.path( oc_results_dir, "KEGG_Annotations/Figures"))
+
+kegg_annotations_e_value_dir <- file.path( oc_results_dir, "KEGG_Annotations", paste( "E_value_", best_e_value_to_use, sep=""), "Map_to_Uniprot" )
+
+kegg_ko_tables_dir <- file.path( kegg_annotations_dir, "KEGG_ko_tables") 
+
+```
+
+## Read in the KEGG pathways KGML nodes list and the RefSeq ID to Pathways Table 
+```{r}
+## Read KEGG KGML nodes list
+full_pathway_ko_table_merged   <- read_tsv( file=file.path( kegg_ko_tables_dir, "ko_kgml_nodes_list.tsv" ))
+
+## Read the lookup table that maps Protein RefSeq ID to KEGG Pathways 
+my_hits_to_pathways_table_filt <- read_tsv( file=file.path(kegg_annotations_e_value_dir, 
+                                                           "mapping_uniprot_hits_to_pathways_and_ko.tsv") ) %>%
+                                  filter (  Query_Species != "Streptococcus pneumoniae")
+
+colnames(my_hits_to_pathways_table_filt)
+
+```
+
+## Merge the RefSeqID to KEGG pathways table with the KGML nodes list table
+```{r}
+
+hits_to_pathways_cleaned <- my_hits_to_pathways_table_filt %>%
+  # mutate( cleaned_kegg_pathway_id = str_replace( kegg_pathway_id, ".*(\\d{5}$)", "\\1")   )  %>%
+  dplyr::select( Query_Species,  Query_Strain, cleaned_kegg_pathway_id, kegg_ko_id) %>%
+  mutate( kegg_ko_pathway_id  = paste( "path:ko", cleaned_kegg_pathway_id, sep="" )) %>%
+  dplyr::select( - cleaned_kegg_pathway_id) %>%
+  distinct()
+
+hits_to_full_pathway_map <- full_pathway_ko_table_merged %>%
+  separate_rows( entry_name , sep=" ") %>%
+  filter( entry_type == "ortholog") %>%
+  left_join( hits_to_pathways_cleaned, by = c( "entry_name" = "kegg_ko_id",
+                                               "pathway_id" = "kegg_ko_pathway_id") ) %>%
+  distinct (Query_Species, Query_Strain, pathway_id, 
+            pathway_title,  entry_id, kgml_type) 
+
+```
+
+## Calculate the percentage of protein nodes in each KEGG pathway that has at least one similar protein in the bacterial strain of interest
+```{r}
+
+# Number of nodes with at least one similar protein for each KEGG pathway and bacterial strain of interest
+num_nodes_found_per_pathway_per_strain <- hits_to_full_pathway_map %>%
+                                          filter( !is.na(Query_Strain)) %>%
+                                          distinct() %>%
+                                          group_by (Query_Species, Query_Strain, pathway_id, pathway_title, kgml_type  ) %>%
+                                          summarise ( num_nodes_found =  n() ) %>%
+                                          ungroup()
+
+# The total number of KEGG ortholog (KO) group representing a protein node within each KEGG pathway
+total_num_nodes_per_pathway <- full_pathway_ko_table_merged %>%
+                                  filter( entry_type == "ortholog") %>%
+                                group_by( pathway_id, pathway_title ) %>%
+                                summarise( total_num_nodes = n()) %>%
+                                ungroup()
+
+# Calculate the percentage of nodes found per pathway and per strain
+perc_nodes_found_per_pathway_per_strain <- num_nodes_found_per_pathway_per_strain %>%
+  left_join( total_num_nodes_per_pathway, by = c("pathway_id", "pathway_title")) %>%
+  mutate( perc_nodes_found = num_nodes_found/total_num_nodes*100 )
+
+
+perc_nodes_found_per_pathway_per_strain
+
+
+```
+
+## Heat map showing the percentage of KEGG pathway nodes mapped for the metabolism KEGG pathways
+
+The percentage of nodes that represent ortholog group of proteins in the KEGG pathways that has at least one similar sequence in the proteome of the bacterial strain of interest, with the pathways represented by the rows and bacterial strains represented by the columns.
+
+```{r}
+
+metabolism_perc_nodes_found_matrix <- perc_nodes_found_per_pathway_per_strain %>%
+  filter ( kgml_type == "metabolism" ) %>%
+  dplyr::select( -pathway_id, -kgml_type, - num_nodes_found, - total_num_nodes, -Query_Species) %>%
+  # Use pivot function to convert the data from long format into wide format (closer to a matrix format) 
+  pivot_wider( names_from=Query_Strain, values_from = perc_nodes_found, values_fill = list( perc_nodes_found = 0) ) %>%
+  column_to_rownames( "pathway_title") %>%
+  as.matrix()
+  
+column_annotations_metabolism <- perc_nodes_found_per_pathway_per_strain %>%
+  filter ( kgml_type == "metabolism" ) %>%
+  distinct ( Query_Species, Query_Strain) %>%
+  dplyr::select( Query_Species ) %>%
+  rename( `Query Species` = "Query_Species")
+
+
+col_annot_metabolism_tsv_format <- perc_nodes_found_per_pathway_per_strain %>%
+  filter ( kgml_type == "metabolism" ) %>%
+  distinct ( Query_Species, Query_Strain) %>%
+  mutate( column_header = paste( Query_Species, Query_Strain, sep = " " ) ) %>%
+  pull( column_header )
+
+get_rows_to_keep <- function(x){ 
+  
+  num_strains_required <- length(x)*proportion_of_strains_above_threshold 
+  num_strains_passed <- length(which(x >= percent_kegg_nodes_mapped_threshold))
+  
+  return( num_strains_required <= num_strains_passed)  
+}
+
+## Show only rows with >= 30% completeness for > 80% of the strains
+rows_to_include <- apply( metabolism_perc_nodes_found_matrix, 
+                          1, 
+                          get_rows_to_keep )
+
+metabolism_perc_nodes_found_matrix_filt <- metabolism_perc_nodes_found_matrix[rows_to_include,]
+
+
+metabolic_heatmap <- main_heatmap( metabolism_perc_nodes_found_matrix_filt, 
+                                   name = "Percent",
+                                   layout = list( height = 1500,
+                                                  margin = list(l = 300, 
+                                                               b = 100))  ) %>%
+  add_col_labels() %>%
+  add_row_labels() %>%
+  add_col_clustering() %>%
+  add_row_clustering(side = "right") %>%
+  add_col_annotation(column_annotations_metabolism) 
+
+save_iheatmap( metabolic_heatmap, 
+               filename = file.path( kegg_figures_dir, 
+                                     "kegg_metabolic_pathway_complete_heatmap.html"))
+
+
+save_iheatmap( metabolic_heatmap, 
+               filename = file.path( kegg_figures_dir, 
+                                     "kegg_metabolic_pathway_complete_heatmap.png"),
+               vheight = 1500 )
+
+### test_iheatmapr_event(metabolic_heatmap, "click")
+
+## Write the percentages as a TSV table
+colnames( metabolism_perc_nodes_found_matrix) <- col_annot_metabolism_tsv_format
+
+### Merge back with the table with data on the total number of nodes per pathway, pathway ID
+metabolism_perc_nodes_found_matrix_sorted <- metabolism_perc_nodes_found_matrix %>% 
+  as.data.frame %>%
+  rownames_to_column(var = "KEGG_pathway_name") %>%
+  left_join( total_num_nodes_per_pathway, by =c( "KEGG_pathway_name" = "pathway_title")) %>%
+  rename( KEGG_pathway_id = "pathway_id",
+          KEGG_pathway_total_num_nodes = "total_num_nodes") %>%
+  mutate( KEGG_pathway_average_percentage = rowSums( dplyr::select(., -contains("KEGG"))    )/
+                              length( vars_select(colnames(.), -contains( "KEGG")) ) ) %>%
+  arrange(desc(KEGG_pathway_average_percentage)) 
+
+### Clean up column names 
+strains_column_names <- vars_select( colnames( metabolism_perc_nodes_found_matrix_sorted), -contains("KEGG"))
+
+metabolism_perc_nodes_found_matrix_cleaned <- metabolism_perc_nodes_found_matrix_sorted %>%
+  rename( pathway_id = "KEGG_pathway_id",
+          total_num_nodes  = "KEGG_pathway_total_num_nodes",
+          average_percent_coverage = "KEGG_pathway_average_percentage",
+          pathway_name = "KEGG_pathway_name") %>%
+  dplyr::select( one_of(c( "pathway_name", "pathway_id", "total_num_nodes", "average_percent_coverage", strains_column_names)) )
+
+### Write summary statistics table
+write_tsv( metabolism_perc_nodes_found_matrix_cleaned, 
+           path=file.path( kegg_ko_tables_dir, "metabolism_perc_nodes_found_matrix.tsv"))
+
+```
+
+
+## Heat map showing the percentage of KEGG pathway nodes mapped for the non-metabolism KEGG pathways
+The percentage of nodes that represent ortholog group of proteins in the KEGG pathways that has at least one similar sequence in the proteome of the bacterial strain of interest, with the pathways represented by the rows and bacterial strains represented by the columns.
+
+
+```{r}
+non_metabolism_perc_nodes_found_matrix <- perc_nodes_found_per_pathway_per_strain %>%
+  filter ( kgml_type == "non-metabolism" ) %>%
+  dplyr::select( -pathway_id, -kgml_type, - num_nodes_found, - total_num_nodes, -Query_Species) %>%
+  # Use pivot function to convert the data from long format into wide format (closer to a matrix format) 
+  pivot_wider( names_from=Query_Strain, values_from = perc_nodes_found, values_fill = list( perc_nodes_found = 0) ) %>%
+  column_to_rownames( "pathway_title") %>%
+  as.matrix()
+
+column_annotations_non_metabolism <- perc_nodes_found_per_pathway_per_strain %>%
+  filter ( kgml_type == "non-metabolism" ) %>%
+  distinct ( Query_Species, Query_Strain) %>%
+  dplyr::select( Query_Species ) %>%
+  rename( `Query Species` = "Query_Species")
+
+
+col_annot_non_metabolism_tsv_format <- perc_nodes_found_per_pathway_per_strain %>%
+  filter ( kgml_type == "non-metabolism" ) %>%
+  distinct ( Query_Species, Query_Strain) %>%
+  mutate( column_header = paste( Query_Species, Query_Strain, sep = " " ) ) %>%
+  pull( column_header )
+
+
+## Show only rows with >= 30% completeness for > 80% of the strains
+
+
+non_metabolic_rows_to_include <- apply( non_metabolism_perc_nodes_found_matrix, 
+                                        1, 
+                                        get_rows_to_keep )
+
+non_metabolism_perc_nodes_found_matrix_filt <- non_metabolism_perc_nodes_found_matrix[non_metabolic_rows_to_include,]
+
+
+non_metabolic_heatmap <- main_heatmap( non_metabolism_perc_nodes_found_matrix_filt, 
+                                       name = "Percent",
+                                       layout = list(height = 500, 
+                                                     margin = list(l = 300, 
+                                                                   b = 100))  ) %>%
+  add_col_labels() %>%
+  add_row_labels() %>%
+  add_col_clustering() %>%
+  add_row_clustering(side = "right") %>%
+  add_col_annotation(column_annotations_non_metabolism)
+
+save_iheatmap( non_metabolic_heatmap, 
+               filename = file.path( kegg_figures_dir, 
+                                     "kegg_non_metabolic_pathway_complete_heatmap.html"))
+
+save_iheatmap( non_metabolic_heatmap, 
+               filename = file.path( kegg_figures_dir, 
+                                     "kegg_non_metabolic_pathway_complete_heatmap.png"),
+               vheight = 35) 
+
+### test_iheatmapr_event(non_metabolic_heatmap, "click")
+
+## Write the percentages as a TSV table
+colnames( non_metabolism_perc_nodes_found_matrix) <- col_annot_non_metabolism_tsv_format
+
+### Merge back with the table with data on the total number of nodes per pathway, pathway ID
+non_metabolism_perc_nodes_found_matrix_sorted <- non_metabolism_perc_nodes_found_matrix %>% 
+  as.data.frame %>%
+  rownames_to_column(var = "KEGG_pathway_name") %>%
+  left_join( total_num_nodes_per_pathway, by =c( "KEGG_pathway_name" = "pathway_title")) %>%
+  rename( KEGG_pathway_id = "pathway_id",
+          KEGG_pathway_total_num_nodes = "total_num_nodes") %>%
+  mutate( KEGG_pathway_average_percentage = rowSums( dplyr::select(., -contains("KEGG"))    )/
+                              length( vars_select(colnames(.), -contains( "KEGG")) ) ) %>%
+  arrange(desc(KEGG_pathway_average_percentage)) 
+
+
+### Clean up column names 
+strains_column_names <- vars_select( colnames( non_metabolism_perc_nodes_found_matrix_sorted), -contains("KEGG"))
+
+non_metabolism_perc_nodes_found_matrix_cleaned <- non_metabolism_perc_nodes_found_matrix_sorted %>%
+  rename( pathway_id = "KEGG_pathway_id",
+          total_num_nodes  = "KEGG_pathway_total_num_nodes",
+          average_percent_coverage = "KEGG_pathway_average_percentage",
+          pathway_name = "KEGG_pathway_name") %>%
+  dplyr::select( one_of(c( "pathway_name", "pathway_id", "total_num_nodes", "average_percent_coverage", strains_column_names)) )
+
+### Write summary statistics table
+write_tsv( non_metabolism_perc_nodes_found_matrix_cleaned, 
+           path=file.path( kegg_ko_tables_dir, "non_metabolism_perc_nodes_found_matrix.tsv"))
+```
+
+
+
+
+
+
+
+
+

@@ -4,14 +4,13 @@
 
 #PBS -N MakeDB
 #PBS -l nodes=1:ppn=1
-#PBS -l vmem=8gb
+#PBS -l mem=8gb
 #PBS -l walltime=11:00:00
 #PBS -j oe
 #PBS -M i.pang@unsw.edu.au
-#PBS -m ae
-
-# Command for running array jobs 
+# Command to run array job
 #PBS -J 0-50
+#PBS -m aej
 
 module load blast+/2.9.0
 

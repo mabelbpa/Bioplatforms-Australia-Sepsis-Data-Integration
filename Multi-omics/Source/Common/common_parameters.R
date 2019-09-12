@@ -15,4 +15,5 @@ dropbox_dir <- "/home/ignatius/Dropbox"
 owncloud_dir <- "/home/ignatius/ownCloud/Sepsis"
 oc_results_dir <- file.path(owncloud_dir, "Multi-omics/Results" )
 
-
+## Dates in which master table were compiled 
+master_table_version_date <- "20190807"
