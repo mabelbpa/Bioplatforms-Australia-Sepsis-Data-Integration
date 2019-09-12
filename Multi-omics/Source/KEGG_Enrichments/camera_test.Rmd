@@ -1,0 +1,340 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+## Libraries management 
+```{r}
+if( !require(pacman)) {
+  install.packages("pacman")
+  library(pacman)
+}
+
+p_load(tidyverse)
+p_load(iheatmapr)
+p_load(tidyselect)
+p_load(readxl)
+p_load(magrittr)
+p_load(multidplyr)
+p_load(limma)
+
+# devtools::install_github("tidyverse/multidplyr")
+
+base_dir <- here::here() # "/home/ignatius/PostDoc/2019/Sepsis"
+source( file.path( base_dir, "Source/Common/helper_functions.R") )
+source( file.path( base_dir, "Source/Common/common_parameters.R") )
+
+```
+
+
+nohup time Rscript --vanilla -e "rmarkdown::render('camera_test.Rmd', output_file='camera_test.html') " > camera_test.log 2>&1 &
+
+
+## Global parameter
+```{r}
+cluster <- new_cluster(8)
+cluster_library( cluster, packages = c("tidyverse", "here", "tidyr", "magrittr"))
+my_fdr_threshold <- 0.05
+version_date <- master_table_version_date
+
+results_version <- "Development"
+```
+
+## Directory Management 
+```{r}
+camera_test_results_dir <- file.path( owncloud_dir,  
+               "Multi-omics/Results/KEGG_Enrichments/Camera_Test",  results_version) 
+
+create_dir_if_not_exists(camera_test_results_dir)
+
+transcriptomics_data_dir <- file.path( owncloud_dir, "Transcriptomics")
+transcriptomics_master_table_dir <- file.path( owncloud_dir, "Master_Tables", version_date, "Transcriptomics" ) 
+transcriptomics_abundances_dir <- file.path( transcriptomics_master_table_dir, "Abundances" ) 
+
+```
+
+## Files Management
+```{r}
+
+kegg_map_title_file <- file.path( owncloud_dir, 
+                                     "Annotations_and_Mapping/KEGG_data_files/pathway/map_title.tab" ) 
+
+kegg_map_title <- vroom::vroom( kegg_map_title_file, 
+                                col_names = c("kegg_pathway_id", 
+                                              "kegg_pathway_name") )
+
+# To be updated 
+abundances_table_file <- file.path(transcriptomics_abundances_dir, 
+                                   "transcriptomics_mock_abundances_values.tsv" )
+
+
+refseq_id_to_kegg_pathway_id_file <- file.path( owncloud_dir, 
+                         "Annotations_and_Mapping/KEGG_Annotations_Stable_Versions", 
+                         "Version_1/E_value_0.001/refseq_id_to_kegg_pathway_id_table.tsv" )
+
+
+list_of_samples_file <- file.path( data_dir, "Samples_List/transcriptomics_samples_list.tsv" )
+
+
+metabolite_id_to_kegg_pathway_id_file <- file.path( owncloud_dir, 
+            "Master_Tables/20190807/Metabolomics/Fold_Changes/metabolomics_kegg_logFC_FDR_table.tsv" ) 
+
+
+# camera_testing_output_file <- file.path( camera_test_results_dir, 
+#                                                 "KEGG_camera_test_E_coli_B36_and_S_aureus_BPH2760.tsv")
+# 
+# camera_testing_output_rds_file <- file.path( camera_test_results_dir, 
+#                                                     "KEGG_camera_test_E_coli_B36_and_S_aureus_BPH2760.RDS" )
+
+camera_test_full_output_file <- file.path( camera_test_results_dir, 
+                                                  "KEGG_camera_test_all_results.tsv")
+
+camera_test_full_output_rds_file <- file.path( camera_test_results_dir, 
+                                                      "KEGG_camera_test_all_results.RDS")
+
+```
+
+## Read the list of samples
+```{r}
+
+list_of_samples <- vroom::vroom( list_of_samples_file ) 
+
+```
+
+## Group map
+# https://dplyr.tidyverse.org/reference/group_map.html
+
+## Import KEGG annotations
+```{r}
+
+refseq_id_to_kegg_pathway_id_table <- vroom::vroom( refseq_id_to_kegg_pathway_id_file )  %>%
+  dplyr::rename( Species   = "Query_Species",
+          Strain    = "Query_Strain",
+          entity_id = "query_acc.ver"  ) %>%
+  dplyr::rename( kegg_pathway_id = "cleaned_kegg_pathway_id") %>%
+  dplyr::distinct( Species, Strain, kegg_pathway_id, entity_id) %>%
+  mutate( entity_type= "Protein")
+
+metabolite_id_to_kegg_pathway_id_table_raw <- vroom::vroom( metabolite_id_to_kegg_pathway_id_file)  
+
+metabolite_id_to_kegg_pathway_id_table <-   metabolite_id_to_kegg_pathway_id_table_raw %>%
+  ## Remove loading standards
+  dplyr::filter( ! ( Type_of_Experiment %in% c( "Metabolomics GC-MS", 
+                                     "Metabolomics LC-MS" )  &
+            str_detect( entity_id, ".*(Istd|ITSD).*" ) ) ) %>%
+  dplyr::distinct( Species, Strain, entity_id, pathway_id) %>%
+  dplyr::filter( !is.na(pathway_id)) %>%
+  mutate( pathway_id = str_replace ( pathway_id, "^path:ko", "")) %>%
+  dplyr::rename( kegg_pathway_id = "pathway_id") %>%
+  dplyr::distinct( Species, Strain, kegg_pathway_id, entity_id) %>%
+  mutate( entity_type= "Metabolite")
+            
+entity_id_to_kegg_pathway_id_table <- refseq_id_to_kegg_pathway_id_table %>%
+    bind_rows( metabolite_id_to_kegg_pathway_id_table)
+ 
+```
+
+
+## Read abundances master table (draft stage)
+```{r}
+
+abundances_table <- vroom::vroom( abundances_table_file ) 
+
+```
+
+## Get the experimental design table 
+```{r}
+
+design_table <- abundances_table %>%
+  distinct( Species, Strain, replicate_name, Treatment_Type)
+
+```
+
+Pooled sera
+RPMI
+RPMI + Glucose
+RPMI + Galactose
+
+
+
+## Create a list of gene sets, each element in the list is a list of genes contained in a gene set
+```{r}
+list_of_gene_sets <- entity_id_to_kegg_pathway_id_table %>%
+                      group_by(Species, Strain, entity_type, kegg_pathway_id ) %>%
+                      nest( gene_set = c( entity_id)) %>%
+                      mutate( gene_set = purrr::map( gene_set, ~pull(., entity_id))  ) %>%
+                      ungroup( Species, Strain, entity_type, kegg_pathway_id)
+
+
+convert_kegg_table_to_list <- function(input_table){ 
+  my_list <- input_table$gene_set 
+  names(my_list) <-  input_table$kegg_pathway_id
+  return(my_list)
+}
+
+list_of_gene_sets_camera <- list_of_gene_sets %>%
+                            group_by( Species, Strain, entity_type )  %>%
+                            nest( data = c( kegg_pathway_id, gene_set) )  %>%
+                            dplyr::mutate( index = purrr::map ( data, 
+                                                                convert_kegg_table_to_list   )) %>%
+                            dplyr::select( -data ) %>%
+                            ungroup( Species, Strain, entity_type )
+                            
+
+```
+
+## Format the design matrix list 
+```{r}
+
+get_design_matrix <- function(input_table) {
+  
+  input_table <- input_table %>%
+          arrange( replicate_name)
+  
+  Group <- factor(input_table$Treatment_Type , levels = sort(unique(input_table$Treatment_Type)))
+  design_matrix<- model.matrix( ~ 0+Group )
+  colnames(design_matrix) <-  c(levels(Group) )
+  rownames(design_matrix ) <- input_table$replicate_name
+  
+  return( design_matrix)
+  
+}
+
+design_table_list <- design_table %>%
+    arrange( Species, Strain, replicate_name ) %>%
+    dplyr::mutate( Treatment_Type = str_replace( Treatment_Type, " ", "_")%>%
+                                    str_replace( "\\+", "plus")  ) %>%
+    group_by( Species, Strain ) %>%
+    nest( data = c (  replicate_name, Treatment_Type) )  %>%
+    dplyr::mutate( design_matrix = purrr::map(data , get_design_matrix )    ) %>%
+    dplyr::select(-data ) %>%
+    ungroup( Species, Strain)
+    
+# design_table_list$design_matrix[[1]]   
+
+```
+
+
+
+## Format the list of abundances values for each strain and each type of comparisons
+```{r}
+my_pivot_norm_expr_matrix <- function( input_table) {
+  
+  output_matrix <- input_table %>%
+    arrange( replicate_name ) %>%
+    pivot_wider( names_from = replicate_name, 
+                 values_from = Log_Counts) %>%
+    column_to_rownames( "entity_id") %>%
+    as.matrix()
+  
+  return( output_matrix)
+  
+}
+
+list_of_abundances_table <- abundances_table %>%
+  dplyr::select(-Treatment_Type, -Units ) %>%
+  distinct() %>%
+  group_by( Species, Strain, Type_of_Experiment ) %>%
+  nest( data = c( entity_id, replicate_name, Log_Counts)) %>%
+  mutate( norm_expr_matrix = purrr::map( data, my_pivot_norm_expr_matrix )   ) %>%
+  dplyr::select(-data) %>%
+  ungroup( Species, Strain, Type_of_Experiment )
+
+# list_of_abundances_table$norm_expr_matrix[[1]]
+
+  
+```
+
+
+## Setup the list of contrasts
+```{r}
+
+lists_of_contrasts_vectors_temp <- list ( Sera_vs_RPMI = c( 1, -1),
+                                          Sera_vs_RPMI_Glucose = c( 1, 0, -1),
+                                          Sera_vs_RPMI_Galactose = c( 1, -1, 0),
+                                          RPMI_Galactose_vs_RPMI_Glucose = c( 0, 1, -1) )
+
+lists_of_contrasts_vectors <- data.frame( contrast=names(lists_of_contrasts_vectors_temp)) %>%
+                                mutate( contrast_vector =   lists_of_contrasts_vectors_temp  )
+
+lists_of_contrasts_strains <- data.frame ( Species = c( "Escherichia coli",
+"Klebsiella variicola",
+"Klebsiella pneumoniae",
+"Staphylococcus aureus",
+"Streptococcus pneumoniae",
+"Streptococcus pneumoniae",
+"Streptococcus pneumoniae",
+"Streptococcus pyogenes" ) ,
+  contrast = c(  "Sera_vs_RPMI",
+                 "Sera_vs_RPMI",
+                 "Sera_vs_RPMI",
+                 "Sera_vs_RPMI",
+                 "Sera_vs_RPMI_Glucose",
+                 "Sera_vs_RPMI_Galactose",
+                 "RPMI_Galactose_vs_RPMI_Glucose",
+                 "Sera_vs_RPMI") ) 
+
+lists_of_contrasts <- lists_of_contrasts_strains %>%
+  left_join( lists_of_contrasts_vectors, by = "contrast")
+
+
+
+```
+
+
+
+```{r}
+
+camera_parameters_table <- list_of_abundances_table %>%
+  mutate( entity_type = case_when(  str_detect( Type_of_Experiment, "Metabolomics") ~ 'Metabolite',
+                                    TRUE ~ "Protein") ) %>%
+  left_join( list_of_gene_sets_camera, 
+             by = c("Species", "Strain", "entity_type"))  %>%
+  left_join( design_table_list, 
+             by = c("Species", "Strain") ) %>%
+  left_join( lists_of_contrasts, by = "Species")
+
+
+head( camera_parameters_table)
+```
+
+
+
+```{r}
+
+camera_test_output <- camera_parameters_table %>%
+                      head() %>%
+                       mutate( camera_tbl =  purrr::pmap( list( y= norm_expr_matrix,
+                                                                index= index, 
+                                                                design = design_matrix,
+                                                                contrast = contrast_vector)
+                                                                , camera     ) ) 
+
+# Error in qr.qty(QR, t(y)) : NA/NaN/Inf in foreign function call (arg 5)
+# Similar problem in: 
+# https://support.bioconductor.org/p/65442/
+# https://github.com/davismcc/scater/issues/69
+
+camera(camera_parameters_table$norm_expr_matrix[[1]],
+       camera_parameters_table$index[[1]],
+       camera_parameters_table$design_matrix[[1]],
+       camera_parameters_table$contrast_vector[[1]])
+
+# qr.qty(qr( camera_parameters_table$norm_expr_matrix[[1]]), t(camera_parameters_table$norm_expr_matrix[[1]]))
+
+
+which(is.na(  camera_parameters_table$norm_expr_matrix[[1]]))
+
+# camera_test_output$camera_tbl[[1]]
+
+```
+
+
+
+
+
+
+
+
+
+
