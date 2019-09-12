@@ -65,7 +65,7 @@ kegg_map_title <- vroom::vroom( kegg_map_title_file,
 
 # To be updated 
 abundances_table_file <- file.path(transcriptomics_abundances_dir, 
-                                   "transcriptomics_mock_abundances_values.tsv" )
+                                   "transcriptomics_cpm_abundances_values.tsv" )
 
 
 refseq_id_to_kegg_pathway_id_file <- file.path( owncloud_dir, 
@@ -139,6 +139,9 @@ entity_id_to_kegg_pathway_id_table <- refseq_id_to_kegg_pathway_id_table %>%
 ```{r}
 
 abundances_table <- vroom::vroom( abundances_table_file ) 
+
+
+distinct(abundances_table, Species, Strain)
 
 ```
 
@@ -303,7 +306,6 @@ head( camera_parameters_table)
 ```{r}
 
 camera_test_output <- camera_parameters_table %>%
-                      head() %>%
                        mutate( camera_tbl =  purrr::pmap( list( y= norm_expr_matrix,
                                                                 index= index, 
                                                                 design = design_matrix,
@@ -327,10 +329,29 @@ which(is.na(  camera_parameters_table$norm_expr_matrix[[1]]))
 
 # camera_test_output$camera_tbl[[1]]
 
+
+saveRDS(camera_test_output, file=camera_test_full_output_rds_file   )
+
+
 ```
 
 
 
+```{r}
+
+camera_test_output_unnested <- camera_test_output %>%
+  mutate( camera_tbl = purrr::map(camera_tbl, ~rownames_to_column(., "kegg_pathway_id"))) %>%
+  dplyr::select(- norm_expr_matrix, - index, -design_matrix, -contrast_vector ) %>%
+  unnest(camera_tbl) %>%
+  left_join( kegg_map_title, by = "kegg_pathway_id" )
+
+
+write_tsv( camera_test_output_unnested, 
+           path=camera_test_full_output_file)
+
+
+
+```
 
 
 
