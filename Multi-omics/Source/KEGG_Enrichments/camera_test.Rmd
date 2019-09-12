@@ -65,7 +65,7 @@ kegg_map_title <- vroom::vroom( kegg_map_title_file,
 
 # To be updated 
 abundances_table_file <- file.path(transcriptomics_abundances_dir, 
-                                   "transcriptomics_cpm_abundances_values.tsv" )
+                                   "transcriptomics_log_cpm_abundances_values.tsv" )
 
 
 refseq_id_to_kegg_pathway_id_file <- file.path( owncloud_dir, 
