@@ -1,0 +1,53 @@
+Species	Strain	sequence_type	chromosome_refseq_id	sequence_name
+Escherichia coli	B36	Chromosomes	NZ_LR130545.1	B36
+Escherichia coli	B36	Plasmids	NZ_LR130546.1	B36 p01
+Escherichia coli	B36	Plasmids	NZ_LR130547.1	B36 p02
+Escherichia coli	MS14384	Chromosomes	NZ_LR130562.1	MS14384
+Escherichia coli	MS14384	Plasmids	NZ_LR130563.1	MS14384 p01
+Escherichia coli	MS14385	Chromosomes	NZ_LR130555.1	MS14385
+Escherichia coli	MS14385	Plasmids	NZ_LR130556.1	MS14385 p01
+Escherichia coli	MS14385	Plasmids	NZ_LR130557.1	MS14385 p02
+Escherichia coli	MS14385	Plasmids	NZ_LR130558.1	MS14385 p03
+Escherichia coli	MS14385	Plasmids	NZ_LR130559.1	MS14385 p04
+Escherichia coli	MS14385	Plasmids	NZ_LR130560.1	MS14385 p05
+Escherichia coli	MS14385	Plasmids	NZ_LR130561.1	MS14385 p06
+Escherichia coli	MS14386	Chromosomes	NZ_LR130552.1	MS14386
+Escherichia coli	MS14386	Plasmids	NZ_LR130553.1	MS14386 p01
+Escherichia coli	MS14386	Plasmids	NZ_LR130554.1	MS14386 p02
+Escherichia coli	MS14387	Chromosomes	NZ_LR130564.1	MS14387
+Escherichia coli	MS14387	Plasmids	NZ_LR130565.1	MS14387 p01
+Escherichia coli	MS14387	Plasmids	NZ_LR130566.1	MS14387 p02
+Klebsiella pneumoniae	AJ218	Chromosomes	NZ_LR130541.1	AJ218
+Klebsiella pneumoniae	AJ218	Plasmids	NZ_LR130542.1	AJ218 p01
+Klebsiella pneumoniae	KPC2	Chromosomes	NZ_LR130548.1	KPC2
+Klebsiella pneumoniae	KPC2	Plasmids	NZ_LR130549.1	KPC2 p01
+Klebsiella pneumoniae	KPC2	Plasmids	NZ_LR130550.1	KPC2 p02
+Klebsiella pneumoniae	KPC2	Plasmids	NZ_LR130551.1	KPC2 p03
+Klebsiella variicola	03-311-0071	Chromosomes	NZ_LR130544.1	03-311-0071
+Klebsiella variicola	04153260899A	Chromosomes	NZ_LR130543.1	04153260899A
+Klebsiella variicola	AJ055	Chromosomes	NZ_LR130539.1	AJ055
+Klebsiella variicola	AJ055	Plasmids	NZ_LR130540.1	AJ055 p01
+Klebsiella variicola	AJ292	Chromosomes	NZ_LR130538.1	AJ292
+Staphylococcus aureus	BPH2760	Chromosomes	NZ_LR130509.1	BPH2760
+Staphylococcus aureus	BPH2760	Plasmids	NZ_LR130510.1	BPH2760 p01
+Staphylococcus aureus	BPH2819	Chromosomes	NZ_LR130511.1	BPH2819
+Staphylococcus aureus	BPH2819	Plasmids	NZ_LR130512.1	BPH2819 p01
+Staphylococcus aureus	BPH2900	Chromosomes	NZ_LR130513.1	BPH2900
+Staphylococcus aureus	BPH2900	Plasmids	NZ_LR130514.1	BPH2900 p01
+Staphylococcus aureus	BPH2947	Chromosomes	NZ_LR130515.1	BPH2947
+Staphylococcus aureus	BPH2947	Plasmids	NZ_LR130516.1	BPH2947 p01
+Staphylococcus aureus	BPH2947	Plasmids	NZ_LR130517.1	BPH2947 p02
+Staphylococcus aureus	BPH2986	Chromosomes	NZ_LR130518.1	BPH2986
+Staphylococcus aureus	BPH2986	Plasmids	NZ_LR130519.1	BPH2986 p01
+Staphylococcus aureus	BPH2986	Plasmids	NZ_LR130520.1	BPH2986 p02
+Streptococcus pneumoniae	180/15	Chromosomes	NZ_LR129844.1	180/15
+Streptococcus pneumoniae	180/2	Chromosomes	NZ_LR129843.1	180/2
+Streptococcus pneumoniae	4496	Chromosomes	NZ_LR129840.1	4496
+Streptococcus pneumoniae	4559	Chromosomes	NZ_LR595848.1	4559
+Streptococcus pneumoniae	4559	Plasmids	NZ_LR595849.1	4559 p01
+Streptococcus pneumoniae	947	Chromosomes	NZ_LR129841.1	947
+Streptococcus pyogenes	5448	Chromosomes	NZ_LR130236.1	5448
+Streptococcus pyogenes	HKU419	Chromosomes	NZ_LR130238.1	HKU419
+Streptococcus pyogenes	PS003	Chromosomes	NZ_LR130239.1	PS003
+Streptococcus pyogenes	PS006	Chromosomes	NZ_LR130240.1	PS006
+Streptococcus pyogenes	SP444	Chromosomes	NZ_LR130237.1	SP444
