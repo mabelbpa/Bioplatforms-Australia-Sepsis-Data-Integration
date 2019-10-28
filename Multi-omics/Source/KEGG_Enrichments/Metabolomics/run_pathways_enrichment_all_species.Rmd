@@ -1,0 +1,244 @@
+---
+title: "R Notebook"
+output: html_notebook
+author: Don Teng and Igy Pang
+date: 15 October 2019
+---
+
+# Pathway Analysis for Metab Data (Sepsis)
+## Do MetaboAnalystR pathway (enrichment) analysis for GC and LC datasets, separately.
+
+### Input/Output
+* Inputs: S.Aureus GC and LC strain datasets, as csv. 10 altogether: named like S_aureus_<G/L>C_<strain_num>.csv.
+
+### Outputs:
+* Lists of perturbed pathways as csvs.
+* Lists of metabolites in each dataset to belong to the respective perturbed pathways, as json.
+
+### Method Details
+* Data curation for statistical analysis - Impute missing values with half of the smallest nonzero missing value. Do row-wise (sample) median normalization, then log-transform.
+* Pathway enrichment - Use the globaltest algorithm. We disregard the pathway topology-based impact method and result.
+* Fold change - Using the arithmetic average of log-values in each class (i.e. geometric average of non-log values), and compute fold changes for case/control.
+
+
+
+```{r}
+if( !require(pacman)) {
+  install.packages("pacman")
+  library(pacman)
+}
+
+p_load(here)
+pacman::p_load("tidyverse", "MetaboAnalystR", "KEGGREST", "rjson")
+p_load(tidyselect)
+p_load(readxl)
+p_load(vroom)
+
+base_dir <- here::here() # "/home/ignatius/PostDoc/2019/Sepsis"
+source( file.path( base_dir, "Source/Common/helper_functions.R") )
+source( file.path( base_dir, "Source/Common/common_parameters.R") )
+
+
+```
+
+
+## Directory Managements
+```{r}
+
+# Get env variable: working dir
+
+input_data_dir <- file.path(base_dir, "Data/Metabolomics/MetaboAnalystR/Data") 
+
+output_dir <- file.path(base_dir, "Results/Metabolomics/MetaboAnalystR/Pathways_Enrichment") 
+
+create_dir_if_not_exists(output_dir)
+
+
+### ***** #### **** NEED TO Replace the temp data directory **** ### **** #### 
+tempdata_dir <- output_dir <- file.path(output_dir, "TempDir") 
+
+create_dir_if_not_exists(tempdata_dir)
+
+```
+
+
+## Files Managements
+```{r}
+fn_ls <- c(list.files(input_data_dir, pattern="S_aureus_GC_"), 
+           list.files(input_data_dir, pattern="S_aureus_LC_"))
+
+norm_metabolomics_data_file <- file.path( owncloud_dir, 
+                "Master_Tables/20190807/Metabolomics/Heat_Map_Data", 
+                "Intermediate_Files/metabolomics_log_and_normalized_values_distinct_long.tsv")
+
+metabolites_keys_table_file <- file.path(owncloud_dir, "Metabolomics", "metabolite_keys_table.xlsx" )
+
+```
+
+## Read metabolites key table 
+```{r}
+metabolite_keys <- read_xlsx(metabolites_keys_table_file)
+
+```
+
+
+## Normalized and log transformed values 
+```{r}
+
+norm_metabolomics_data <-  vroom::vroom ( norm_metabolomics_data_file ) 
+
+```
+
+
+
+
+
+```{r}
+
+call_maca_pw_analysis <- function(fn_auc_csv, kegg_species_id, perform_normalization = FALSE) {
+    "Calls the pathway enrichment analysis module from MetaboAnalystR. 
+    Does row-wise median-normalization and log-transforms the data.
+    P-values of pathway enrichment are calculated using the `globaltest` algorithm, and pathway impact scores
+    computed using the pathway centrality option. But impact should be disregarded as an overly-abstract
+    graph theoretic notion that doesn't necessarily have any biological relevance. 
+
+    PARAMS
+    ------
+    fn_auc_csv: str; filename of input run summary table as a csv file, with AUCs as values. 
+    rownames are the sample names, column names are the metabolite names. Column 1 are the 
+    experimental groupings. Because of the way this module works, only 2 groups are supported.
+
+    RETURNS
+    -------
+    list of two outputs:
+    tbl.out: output tibble of pathway analysis enrichment. columns:
+        metabolite (compound common name), total cmpd, Hits, raw p (raw p value), -log p, 
+        Holm adjust(ed p value), FDR, Impact. 
+    pw.dict: named list of lists; each key is the pathway ID, and each value is a list of 
+        compounds from the input data which appear in that particular pathway. 
+    "
+
+    mSet<-InitDataObjects("conc", "pathqea", FALSE)
+    mSet<-Read.TextData(mSet, fn_auc_csv, "rowu", "disc");
+    mSet<-CrossReferencing(mSet, "hmdb_kegg");
+    mSet<-CreateMappingResultTable(mSet)
+    mSet<-SanityCheckData(mSet)
+    mSet<-ReplaceMin(mSet);
+    mSet<-PreparePrenormData(mSet)
+    if( perform_normalization == TRUE ) {
+          mSet<-Normalization(mSet, "MedianNorm", "LogNorm", "NULL", ratio=FALSE, ratioNum=20)
+    } else  {
+          mSet<-Normalization(mSet, "NULL", "NULL", "NULL", ratio=FALSE, ratioNum=20)
+    }
+    mSet<-SetKEGG.PathLib(mSet, kegg_species_id)
+    mSet<-SetMetabolomeFilter(mSet, F);
+    mSet<-CalculateQeaScore(mSet, "rbc", "gt")
+
+    tbl.out <- as_tibble(mSet$analSet$qea.mat, rownames="pw_name")
+    pw.dict <- mSet$analSet$qea.hits
+
+    return(list(tbl.out, pw.dict))
+}
+
+
+maca_pw_analysis_wrapper <- function(Species, Strain, Type_of_Experiment, data, kegg_species_id ) {
+  
+  my_type_of_expt <- case_when( str_detect( Type_of_Experiment, "GC-MS") ~ "GC-MS",
+                                str_detect( Type_of_Experiment, "LC-MS") ~ "LC-MS",
+                                TRUE ~ NA_character_ )
+  
+  temp_file_name <-  file.path(tempdata_dir, paste0( paste( str_replace(Species, "\\s+", "_") , 
+                                               Strain, my_type_of_expt, sep="_" ),  ".csv") )
+
+  print( temp_file_name)
+  vroom::vroom_write( data, temp_file_name, delim=",", quote="all")  
+  
+  analysi_result <- NULL
+  
+    tryCatch({
+ analysi_result <- call_maca_pw_analysis( temp_file_name, kegg_species_id, 
+                             perform_normalization = TRUE )
+  }, error=function(e){})
+  
+  return(analysi_result)
+  
+}
+
+```
+
+
+## Pivot the data matrix 
+```{r}
+# Sample, group, (metabolite name as remaining columns )
+
+kegg_species_id_table <- tribble( ~Species, ~kegg_species_id,
+                                  "Staphylococcus aureus", "sau",
+                                  "Escherichia coli", "eco",
+                                  "Streptococcus pyogenes", "spym",
+                                   "Klebsiella pneumoniae", "eco",
+                                  "Klebsiella variicola", "eco",
+                                  "Streptococcus pneumoniae", "spn"
+                                  )
+
+cut_into_individual_tables <- norm_metabolomics_data %>%
+  group_by( Species, Strain, Type_of_Experiment, sample_id, Group, entity_id  ) %>%
+  summarise( log_norm_value= mean(log_norm_value) ) %>%
+  ungroup() %>%
+  rename( Sample = "sample_id",
+          Groups = "Group") %>%
+  group_by( Species, Strain, Type_of_Experiment ) %>%
+  nest() %>%
+  mutate( data = purrr::map(data, ~pivot_wider(., names_from = entity_id, values_from = log_norm_value))) %>%
+  ungroup() %>%
+  inner_join( kegg_species_id_table, by = c( "Species"))
+      
+# cut_into_individual_tables %>% 
+#   filter(  Strain == "BPH2900" & 
+#            Type_of_Experiment == "Metabolomics LC-MS" ) %>% 
+#   dplyr::select(data) %>%
+#   pull(data)
+
+# cut_into_individual_tables$data
+
+```
+
+
+```{r}
+
+maca_pw_analysis_results <- cut_into_individual_tables %>%
+  dplyr::mutate( results = purrr::pmap( list(Species, Strain, Type_of_Experiment, data, kegg_species_id ),
+                                        maca_pw_analysis_wrapper))
+
+```
+
+```{r}
+# cut -f1 temp.txt | sed -e 's/\(^.*\)/"\1", /g' | perl -p -e 's/\n//'
+
+test_kegg <- function(  kegg_species_id ) {
+  
+  x <- NULL 
+  
+  tryCatch({
+ x <- call_maca_pw_analysis( "/home/ignatius/PostDoc/2019/Sepsis/Results/Metabolomics/MetaboAnalystR/Pathways_Enrichment/TempDir/Klebsiella_pneumoniae_AJ218_GC-MS.csv", kegg_species_id, 
+                             perform_normalization = TRUE )
+  }, error=function(e){})
+   
+   return(x)
+  
+}
+
+list_of_ids <- c("kpu", "kpm", "kpp", "kph", "kpz", "kpv", "kpw", "kpy", "kpg", "kpc", "kpq", "kpt", 
+                 "kpe", "kpo", "kpr", "kpj", "kpi", "kpa", "kps", "kpx", "kpb", "kpne", "kpnu", "kpnk", 
+                 "kva", "kpk", "kvd", "kvq", "kox", "koe", "koy", "kom", "kmi", "kok", "koc", "kqu", 
+                 "eae", "ear", "kqv", "kll", "klw" )
+
+test_output <- purrr::map( list_of_ids, test_kegg)
+
+purrr::map( test_output, 1)
+
+```
+
+
+
+
+
